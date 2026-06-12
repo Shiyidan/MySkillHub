@@ -1,0 +1,4 @@
+interface:
+  display_name: "Exam Paper Recognizer"
+  short_description: "Extract exam PDFs into validated question JSON with diagrams."
+  default_prompt: "Use $exam-paper-recognizer to extract this exam PDF into validated question JSON with review Markdown."
