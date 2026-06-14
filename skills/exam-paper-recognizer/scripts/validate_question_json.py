@@ -5,8 +5,91 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+
+def collect_tree_labels(nodes: list[dict[str, Any]]) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    stack = list(nodes)
+    while stack:
+        node = stack.pop()
+        code = node.get("code")
+        label = node.get("label")
+        if isinstance(code, str) and isinstance(label, str):
+            labels[code] = label
+        children = node.get("children")
+        if isinstance(children, list):
+            stack.extend(child for child in children if isinstance(child, dict))
+    return labels
+
+
+def load_knowledge_tree_labels() -> dict[str, str]:
+    tree_path = Path(__file__).resolve().parents[1] / "references" / "esat-knowledge-tree.json"
+    if not tree_path.exists():
+        return {}
+    tree = json.loads(tree_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(tree, list):
+        return {}
+    return collect_tree_labels(tree)
+
+
+MOJIBAKE_MARKERS = (
+    "�",
+    "锛",
+    "銆",
+    "鐨",
+    "绛旀",
+    "璇曞",
+    "寮�",
+)
+
+
+def has_cjk(text: str) -> bool:
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
+
+
+def string_garbled_reasons(text: str) -> list[str]:
+    reasons: list[str] = []
+    if re.search(r"\?{3,}", text):
+        reasons.append("contains repeated question marks")
+    if any(char != "\n" and ord(char) < 32 for char in text):
+        reasons.append("contains control characters")
+    if any(marker in text for marker in MOJIBAKE_MARKERS):
+        reasons.append("contains common mojibake markers")
+    return reasons
+
+
+def validate_text_encoding(value: Any, path: str, issues: list[str]) -> None:
+    if isinstance(value, str):
+        reasons = string_garbled_reasons(value)
+        if reasons:
+            issues.append(f"{path} may be garbled: {', '.join(reasons)}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            validate_text_encoding(item, f"{path}[{index}]", issues)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            validate_text_encoding(item, f"{path}.{key}", issues)
+
+
+def validate_learning_analysis_encoding(question: dict[str, Any], prefix: str, issues: list[str]) -> None:
+    learning_analysis = question.get("learning_analysis")
+    if not isinstance(learning_analysis, dict):
+        return
+    validate_text_encoding(learning_analysis, f"{prefix}.learning_analysis", issues)
+    if learning_analysis.get("language") != "zh-CN":
+        return
+
+    checks = [
+        ("exam_focus_text", learning_analysis.get("exam_focus_text")),
+        ("solution.summary", learning_analysis.get("solution", {}).get("summary") if isinstance(learning_analysis.get("solution"), dict) else None),
+        ("review_guidance.summary", learning_analysis.get("review_guidance", {}).get("summary") if isinstance(learning_analysis.get("review_guidance"), dict) else None),
+    ]
+    for field, value in checks:
+        if isinstance(value, str) and value.strip() and not has_cjk(value):
+            issues.append(f"{prefix}.learning_analysis.{field} is zh-CN but contains no Chinese characters")
 
 
 def text_from_blocks(blocks: list[dict[str, Any]]) -> str:
@@ -42,6 +125,7 @@ def option_text(option: dict[str, Any]) -> str:
 
 def validate(data: Any, max_question: int | None = None) -> list[str]:
     issues: list[str] = []
+    knowledge_labels = load_knowledge_tree_labels()
     if not isinstance(data, dict):
         return ["root must be an object"]
     questions = data.get("questions")
@@ -69,6 +153,29 @@ def validate(data: Any, max_question: int | None = None) -> list[str]:
 
         if not question_stem_text(question):
             issues.append(f"{prefix} has empty stem/title")
+        validate_text_encoding(question, prefix, issues)
+        validate_learning_analysis_encoding(question, prefix, issues)
+
+        knowledge_points = question.get("knowledge_points")
+        if knowledge_points is not None:
+            if not isinstance(knowledge_points, list):
+                issues.append(f"{prefix}.knowledge_points must be an array")
+            else:
+                for kp_index, knowledge_point in enumerate(knowledge_points):
+                    kp_prefix = f"{prefix}.knowledge_points[{kp_index}]"
+                    if not isinstance(knowledge_point, dict):
+                        issues.append(f"{kp_prefix} must be an object")
+                        continue
+                    code = knowledge_point.get("code")
+                    label = knowledge_point.get("label")
+                    if not isinstance(code, str) or not code.strip():
+                        issues.append(f"{kp_prefix}.code is missing")
+                    elif knowledge_labels and code not in knowledge_labels:
+                        issues.append(f"{kp_prefix}.code {code} is not in esat-knowledge-tree.json")
+                    if not isinstance(label, str) or not label.strip():
+                        issues.append(f"{kp_prefix}.label is missing")
+                    elif isinstance(code, str) and code in knowledge_labels and label != knowledge_labels[code]:
+                        issues.append(f"{kp_prefix}.label does not match esat-knowledge-tree.json for code {code}")
 
         options = question.get("options")
         if not isinstance(options, list):

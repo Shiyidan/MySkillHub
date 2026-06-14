@@ -13,6 +13,14 @@
 
 原因：LaTeX 反斜杠和 JSON 字符串中的真实换行，是模型输出 JSON 时最常见的解析失败来源。
 
+## 编码与乱码自检
+
+- 所有学生可见中文字段必须使用正常 UTF-8 中文，不允许出现 `???`、`����`、控制字符或 mojibake。
+- 重点检查 `learning_analysis.exam_focus_text`、`learning_analysis.exam_focus[].title`、`learning_analysis.exam_focus[].description`、`learning_analysis.solution.summary`、`learning_analysis.review_guidance.summary`。
+- `learning_analysis.language = "zh-CN"` 时，上述中文解析字段必须包含正常中文字符；如果只剩问号、英文占位或乱码，必须重写该字段。
+- 不要通过 PowerShell 内联中文字符串批量写入最终 JSON；需要批量修复时，使用 UTF-8 `.py` 脚本或 UTF-8 JSON 模板文件。
+- 导出前必须运行 `scripts/validate_question_json.py <json>`。如果校验提示 `may be garbled` 或 `contains no Chinese characters`，不要交付，先重新生成对应解析字段。
+
 ## 文本抽取
 
 - 保留英文原文，不要改写题干和选项。
@@ -61,10 +69,13 @@ validate with scripts/validate_question_json.py <json> --max-question 10
       "answer": [],
       "images": [],
       "subject": "Physics",
+      "subject_code": "130000",
+      "topic": "Mechanics (力学)",
+      "topic_code": "131000",
       "question_type": "graph_interpretation",
       "difficulty": {"level": "medium", "score": 0.55, "reason": "Requires interpreting a linear graph and applying spring energy relationships."},
       "knowledge_points": [
-        {"name": "spring potential energy", "taxonomy": "physics.mechanics.energy", "confidence": 0.9}
+        {"code": "131004", "label": "Energy, work & power (能量、功与功率)", "role": "primary", "confidence": 0.9}
       ],
       "skills": ["graph interpretation", "unit conversion"],
       "learning_analysis": {
@@ -72,7 +83,7 @@ validate with scripts/validate_question_json.py <json> --max-question 10
           {
             "title": "Spring potential energy",
             "description": "Interpret the relationship between stored energy and extension.",
-            "source_knowledge_points": ["spring potential energy"]
+            "source_knowledge_points": ["131004"]
           }
         ],
         "solution": {
@@ -104,6 +115,23 @@ validate with scripts/validate_question_json.py <json> --max-question 10
   ]
 }
 ```
+
+## ESAT 考纲 code 匹配规则
+
+- ESAT/ENGAA 风格试题默认使用 `references/esat-knowledge-tree.json` 作为知识点依赖。
+- 这份依赖是 Element UI tree 形态，每个节点只有 `code`、`label` 和可选 `children`。
+- `subject_code` 必须匹配第 1 层科目节点，例如 `130000`；`subject` 使用该节点的英文科目名或完整 label。
+- `topic_code` 必须匹配第 2 层一级考点节点，例如 `132000`；`topic` 使用该节点的完整 label。
+- `knowledge_points` 只能选择第 3 层知识点节点，不要选择 exam、subject 或 topic 父节点。
+- 每个 `knowledge_points[]` 至少输出：
+  ```json
+  {"code": "132001", "label": "Circuits (电路)", "role": "primary", "confidence": 0.96}
+  ```
+- `code` 和 `label` 必须与 `esat-knowledge-tree.json` 中的节点保持一致，不要自由发明 code、缩写或新 label。
+- 一道题可以对应多个知识点；主考点设置 `role: "primary"`，辅助考点设置 `role: "secondary"`。
+- 如果题目涉及跨知识点综合，保留多个 `knowledge_points`，并将 `difficulty.level` 优先标为 `composite`。
+- `learning_analysis.exam_focus` 可以引用 `source_knowledge_points`，此处优先填写知识点 code，例如 `["132001", "132002"]`。
+- 如果无法精确匹配，选择最接近的第 3 层节点并降低 `confidence`；不要输出不存在于考纲树的 code。
 
 ## 学生侧解析字段
 

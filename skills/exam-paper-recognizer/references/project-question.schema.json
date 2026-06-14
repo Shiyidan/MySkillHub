@@ -66,6 +66,18 @@
           "type": "string",
           "description": "题目所属科目或主要领域，例如 Mathematics, Physics, Engineering Mathematics, Mechanics, Electricity。"
         },
+        "subject_code": {
+          "type": ["string", "null"],
+          "description": "对应 ESAT 考纲树中的科目节点 code，例如 130000。"
+        },
+        "topic": {
+          "type": ["string", "null"],
+          "description": "对应 ESAT 考纲树中的一级考点 label，例如 Electricity & Magnetism（电学与磁学）。"
+        },
+        "topic_code": {
+          "type": ["string", "null"],
+          "description": "对应 ESAT 考纲树中的一级考点 code，例如 132000。"
+        },
         "question_type": {
           "type": "string",
           "enum": [
@@ -95,9 +107,22 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name"],
+            "required": ["code", "label"],
             "additionalProperties": true,
             "properties": {
+              "code": {
+                "type": "string",
+                "description": "必须来自 references/esat-knowledge-tree.json 的第 3 层知识点 code，例如 132001。"
+              },
+              "label": {
+                "type": "string",
+                "description": "必须与考纲树中该 code 的 label 一致，例如 Circuits (电路)。"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["primary", "secondary", "supporting", "unknown"],
+                "description": "primary 表示主考点；secondary/supporting 表示辅助考点。"
+              },
               "name": {"type": "string"},
               "taxonomy": {"type": "string"},
               "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
