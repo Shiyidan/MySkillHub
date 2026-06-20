@@ -60,38 +60,10 @@ def apply_short_analysis(data: dict[str, Any]) -> None:
             raise ValueError(f"Question {number} has overlong learning-analysis text: {too_long}")
 
         question["learning_analysis"] = {
-            "language": "zh-CN",
-            "max_chars_per_section": 50,
-            "exam_focus_text": focus,
-            "exam_focus": [
-                {
-                    "title": focus,
-                    "description": focus,
-                    "source_knowledge_points": source_knowledge_points(question),
-                }
-            ],
-            "solution": {
-                "status": "generated",
-                "summary": solution,
-                "steps": [],
-                "final_answer": f"答案：{answer}" if answer else "",
-                "distractor_analysis": [],
-            },
-            "review_guidance": {
-                "status": "generated",
-                "summary": review,
-                "recommended_topics": [],
-                "practice_suggestions": [],
-                "common_mistakes": [],
-            },
+            "exam_focus": focus,
+            "solution": solution,
+            "review_guidance": review,
         }
-
-    data.setdefault("extraction", {})["learning_analysis_policy"] = {
-        "language": "zh-CN",
-        "max_chars_per_section": 50,
-        "formula_format": "markdown_latex",
-        "sections": ["exam_focus_text", "solution.summary", "review_guidance.summary"],
-    }
 
 
 def main() -> int:

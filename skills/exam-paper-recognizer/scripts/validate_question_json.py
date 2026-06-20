@@ -25,14 +25,97 @@ def collect_tree_labels(nodes: list[dict[str, Any]]) -> dict[str, str]:
     return labels
 
 
-def load_knowledge_tree_labels() -> dict[str, str]:
-    tree_path = Path(__file__).resolve().parents[1] / "references" / "esat-knowledge-tree.json"
+def collect_syllabus_leaf_paths(nodes: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    paths: dict[str, dict[str, str]] = {}
+
+    def plain_subject(label: str) -> str:
+        return label.split(" (", 1)[0] if " (" in label else label
+
+    def walk(node: dict[str, Any], ancestors: list[dict[str, Any]]) -> None:
+        code = node.get("code")
+        children = node.get("children")
+        if isinstance(code, str) and len(ancestors) >= 3:
+            subject = ancestors[1]
+            topic = ancestors[2]
+            paths[code] = {
+                "subject": plain_subject(str(subject.get("label", ""))),
+                "subject_code": str(subject.get("code", "")),
+                "topic": str(topic.get("label", "")),
+                "topic_code": str(topic.get("code", "")),
+            }
+        if isinstance(children, list):
+            for child in children:
+                if isinstance(child, dict):
+                    walk(child, ancestors + [node])
+
+    for root in nodes:
+        if isinstance(root, dict):
+            walk(root, [])
+    return paths
+
+
+def load_tree_labels(filename: str) -> dict[str, str]:
+    tree_path = Path(__file__).resolve().parents[1] / "references" / filename
     if not tree_path.exists():
         return {}
     tree = json.loads(tree_path.read_text(encoding="utf-8-sig"))
     if not isinstance(tree, list):
         return {}
     return collect_tree_labels(tree)
+
+
+def load_syllabus_leaf_paths() -> dict[str, dict[str, str]]:
+    tree_path = Path(__file__).resolve().parents[1] / "references" / "esat-knowledge-tree.json"
+    if not tree_path.exists():
+        return {}
+    tree = json.loads(tree_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(tree, list):
+        return {}
+    return collect_syllabus_leaf_paths(tree)
+
+
+def primary_syllabus_code(question: dict[str, Any]) -> str | None:
+    points = question.get("syllabus_points")
+    if not isinstance(points, list):
+        return None
+    for point in points:
+        if isinstance(point, dict) and point.get("role") == "primary" and isinstance(point.get("code"), str):
+            return point["code"]
+    for point in points:
+        if isinstance(point, dict) and isinstance(point.get("code"), str):
+            return point["code"]
+    return None
+
+
+def validate_point_array(
+    question: dict[str, Any],
+    field_name: str,
+    labels: dict[str, str],
+    label_source: str,
+    prefix: str,
+    issues: list[str],
+) -> None:
+    points = question.get(field_name)
+    if points is None:
+        return
+    if not isinstance(points, list):
+        issues.append(f"{prefix}.{field_name} must be an array")
+        return
+    for point_index, point in enumerate(points):
+        point_prefix = f"{prefix}.{field_name}[{point_index}]"
+        if not isinstance(point, dict):
+            issues.append(f"{point_prefix} must be an object")
+            continue
+        code = point.get("code")
+        label = point.get("label")
+        if not isinstance(code, str) or not code.strip():
+            issues.append(f"{point_prefix}.code is missing")
+        elif labels and code not in labels:
+            issues.append(f"{point_prefix}.code {code} is not in {label_source}")
+        if not isinstance(label, str) or not label.strip():
+            issues.append(f"{point_prefix}.label is missing")
+        elif isinstance(code, str) and code in labels and label != labels[code]:
+            issues.append(f"{point_prefix}.label does not match {label_source} for code {code}")
 
 
 MOJIBAKE_MARKERS = (
@@ -79,17 +162,15 @@ def validate_learning_analysis_encoding(question: dict[str, Any], prefix: str, i
     if not isinstance(learning_analysis, dict):
         return
     validate_text_encoding(learning_analysis, f"{prefix}.learning_analysis", issues)
-    if learning_analysis.get("language") != "zh-CN":
-        return
 
     checks = [
-        ("exam_focus_text", learning_analysis.get("exam_focus_text")),
-        ("solution.summary", learning_analysis.get("solution", {}).get("summary") if isinstance(learning_analysis.get("solution"), dict) else None),
-        ("review_guidance.summary", learning_analysis.get("review_guidance", {}).get("summary") if isinstance(learning_analysis.get("review_guidance"), dict) else None),
+        ("exam_focus", learning_analysis.get("exam_focus")),
+        ("solution", learning_analysis.get("solution")),
+        ("review_guidance", learning_analysis.get("review_guidance")),
     ]
     for field, value in checks:
         if isinstance(value, str) and value.strip() and not has_cjk(value):
-            issues.append(f"{prefix}.learning_analysis.{field} is zh-CN but contains no Chinese characters")
+            issues.append(f"{prefix}.learning_analysis.{field} should contain Chinese characters")
 
 
 def text_from_blocks(blocks: list[dict[str, Any]]) -> str:
@@ -125,20 +206,59 @@ def option_text(option: dict[str, Any]) -> str:
 
 def validate(data: Any, max_question: int | None = None) -> list[str]:
     issues: list[str] = []
-    knowledge_labels = load_knowledge_tree_labels()
+    syllabus_labels = load_tree_labels("esat-knowledge-tree.json")
+    syllabus_paths = load_syllabus_leaf_paths()
+    knowledge_labels = load_tree_labels("esat-medium-knowledge-tree.json")
     if not isinstance(data, dict):
         return ["root must be an object"]
+    root_allowed = {"questions"}
+    for key in data:
+        if key not in root_allowed:
+            issues.append(f"root.{key} is not allowed in final clean JSON")
     questions = data.get("questions")
     if not isinstance(questions, list) or not questions:
         return ["questions must be a non-empty array"]
 
     seen: set[int] = set()
     numbers: list[int] = []
+    question_allowed = {
+        "number",
+        "title",
+        "content_blocks",
+        "options",
+        "answer",
+        "images",
+        "subject",
+        "subject_code",
+        "topic",
+        "topic_code",
+        "question_type",
+        "difficulty",
+        "syllabus_points",
+        "knowledge_points",
+        "skills",
+        "learning_analysis",
+        "generation_profile",
+    }
+    forbidden_question_fields = {
+        "rendering",
+        "answer_source",
+        "knowledge_mapping",
+        "source",
+        "confidence",
+        "quality",
+    }
     for index, question in enumerate(questions):
         prefix = f"questions[{index}]"
         if not isinstance(question, dict):
             issues.append(f"{prefix} must be an object")
             continue
+        for key in question:
+            if key in forbidden_question_fields or key not in question_allowed:
+                issues.append(f"{prefix}.{key} is not allowed in final clean JSON")
+        for required_key in ("number", "title", "options", "answer", "images"):
+            if required_key not in question:
+                issues.append(f"{prefix}.{required_key} is required")
 
         number = question.get("number")
         if not isinstance(number, int) or number <= 0:
@@ -156,26 +276,35 @@ def validate(data: Any, max_question: int | None = None) -> list[str]:
         validate_text_encoding(question, prefix, issues)
         validate_learning_analysis_encoding(question, prefix, issues)
 
-        knowledge_points = question.get("knowledge_points")
-        if knowledge_points is not None:
-            if not isinstance(knowledge_points, list):
-                issues.append(f"{prefix}.knowledge_points must be an array")
-            else:
-                for kp_index, knowledge_point in enumerate(knowledge_points):
-                    kp_prefix = f"{prefix}.knowledge_points[{kp_index}]"
-                    if not isinstance(knowledge_point, dict):
-                        issues.append(f"{kp_prefix} must be an object")
-                        continue
-                    code = knowledge_point.get("code")
-                    label = knowledge_point.get("label")
-                    if not isinstance(code, str) or not code.strip():
-                        issues.append(f"{kp_prefix}.code is missing")
-                    elif knowledge_labels and code not in knowledge_labels:
-                        issues.append(f"{kp_prefix}.code {code} is not in esat-knowledge-tree.json")
-                    if not isinstance(label, str) or not label.strip():
-                        issues.append(f"{kp_prefix}.label is missing")
-                    elif isinstance(code, str) and code in knowledge_labels and label != knowledge_labels[code]:
-                        issues.append(f"{kp_prefix}.label does not match esat-knowledge-tree.json for code {code}")
+        difficulty = question.get("difficulty")
+        if difficulty is not None:
+            if difficulty not in {"easy", "medium", "hard", "composite", "unknown"}:
+                issues.append(f"{prefix}.difficulty must be one of easy/medium/hard/composite/unknown")
+
+        code_for_path = primary_syllabus_code(question)
+        if code_for_path and code_for_path in syllabus_paths:
+            expected = syllabus_paths[code_for_path]
+            for field in ("subject", "subject_code", "topic", "topic_code"):
+                value = question.get(field)
+                if value is not None and value != expected[field]:
+                    issues.append(f"{prefix}.{field} does not match primary syllabus point {code_for_path}")
+
+        validate_point_array(
+            question,
+            field_name="syllabus_points",
+            labels=syllabus_labels,
+            label_source="esat-knowledge-tree.json",
+            prefix=prefix,
+            issues=issues,
+        )
+        validate_point_array(
+            question,
+            field_name="knowledge_points",
+            labels=knowledge_labels,
+            label_source="esat-medium-knowledge-tree.json",
+            prefix=prefix,
+            issues=issues,
+        )
 
         options = question.get("options")
         if not isinstance(options, list):

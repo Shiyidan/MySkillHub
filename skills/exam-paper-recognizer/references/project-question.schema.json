@@ -1,26 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.codex.skills/exam-paper-recognizer/project-question.schema.json",
-  "title": "Project-Compatible Exam Questions",
-  "description": "项目实际入库/测试使用的试题 JSON。保持 number/title/options/answer/images 兼容，同时增加用于解析、知识点归类、难度判断、同类题生成和图形重绘的字段。",
+  "title": "Clean Project Exam Questions",
+  "description": "项目最终入库/渲染使用的清爽版试题 JSON。根层级只允许 questions；调试信息、来源追踪、答案匹配日志、taxonomy 说明和解析过程元数据不得进入 final JSON。",
   "type": "object",
   "required": ["questions"],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
-    "paper": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "exam": {"type": "string"},
-        "year": {"type": ["integer", "string", "null"]},
-        "section": {"type": ["string", "null"]},
-        "subject_scope": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "source_pdf": {"type": ["string", "null"]}
-      }
-    },
     "questions": {
       "type": "array",
       "minItems": 1,
@@ -31,10 +17,15 @@
     "question": {
       "type": "object",
       "required": ["number", "title", "options", "answer", "images"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "number": {"type": "integer", "minimum": 1},
         "title": {"type": "string"},
+        "content_blocks": {
+          "type": "array",
+          "description": "按原题阅读顺序保存题干段落、公式和题中图片引用。",
+          "items": {"$ref": "#/$defs/content_block"}
+        },
         "options": {
           "type": "array",
           "items": {"$ref": "#/$defs/option"}
@@ -43,40 +34,25 @@
           "type": "array",
           "items": {"type": "string"}
         },
-        "answer_source": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "type": {"type": "string"},
-            "source_pdf": {"type": "string"},
-            "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
-            "matched_by": {"type": "string"}
-          }
-        },
         "images": {
           "type": "array",
           "items": {"$ref": "#/$defs/image"}
         },
-        "content_blocks": {
-          "type": "array",
-          "description": "Optional ordered stem blocks preserving the original reading layout, including mid-stem images.",
-          "items": {"$ref": "#/$defs/content_block"}
-        },
         "subject": {
           "type": "string",
-          "description": "题目所属科目或主要领域，例如 Mathematics, Physics, Engineering Mathematics, Mechanics, Electricity。"
+          "description": "题目所属科目，例如 Mathematics 1, Mathematics 2, Physics, Chemistry, Biology。"
         },
         "subject_code": {
-          "type": ["string", "null"],
-          "description": "对应 ESAT 考纲树中的科目节点 code，例如 130000。"
+          "type": "string",
+          "description": "对应项目左侧简版考纲 tree 的科目节点 code，例如 110000。"
         },
         "topic": {
-          "type": ["string", "null"],
-          "description": "对应 ESAT 考纲树中的一级考点 label，例如 Electricity & Magnetism（电学与磁学）。"
+          "type": "string",
+          "description": "对应项目左侧简版考纲 tree 的 topic 节点 label，例如 Number & Arithmetic (算术与数)。"
         },
         "topic_code": {
-          "type": ["string", "null"],
-          "description": "对应 ESAT 考纲树中的一级考点 code，例如 132000。"
+          "type": "string",
+          "description": "对应项目左侧简版考纲 tree 的 topic 节点 code，例如 111000。"
         },
         "question_type": {
           "type": "string",
@@ -95,84 +71,76 @@
           ]
         },
         "difficulty": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "level": {"type": "string", "enum": ["easy", "medium", "hard", "composite", "unknown"]},
-            "score": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
-            "reason": {"type": "string"}
-          }
+          "type": "string",
+          "enum": ["easy", "medium", "hard", "composite", "unknown"],
+          "description": "只保留难度结果；中文展示由前端映射。"
+        },
+        "syllabus_points": {
+          "type": "array",
+          "description": "对应项目左侧简版考纲 tree 的叶子节点，用于前端筛选。",
+          "items": {"$ref": "#/$defs/point"}
         },
         "knowledge_points": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["code", "label"],
-            "additionalProperties": true,
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "必须来自 references/esat-knowledge-tree.json 的第 3 层知识点 code，例如 132001。"
-              },
-              "label": {
-                "type": "string",
-                "description": "必须与考纲树中该 code 的 label 一致，例如 Circuits (电路)。"
-              },
-              "role": {
-                "type": "string",
-                "enum": ["primary", "secondary", "supporting", "unknown"],
-                "description": "primary 表示主考点；secondary/supporting 表示辅助考点。"
-              },
-              "name": {"type": "string"},
-              "taxonomy": {"type": "string"},
-              "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
-            }
-          }
+          "description": "对应 medium/official 考纲 tree 的叶子节点，用于细化知识点、诊断报告和后续生题。",
+          "items": {"$ref": "#/$defs/point"}
         },
         "skills": {
           "type": "array",
-          "items": {"type": "string"},
-          "description": "解题技能标签，例如 algebraic manipulation, unit conversion, proportional reasoning。"
+          "items": {"type": "string"}
         },
-        "generation_profile": {
+        "learning_analysis": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "properties": {
-            "can_generate_similar": {"type": "boolean"},
-            "similarity_template": {"type": "string"},
-            "variable_parameters": {
-              "type": "array",
-              "items": {"$ref": "#/$defs/variable_parameter"}
+            "exam_focus": {
+              "type": "string",
+              "description": "中文考察点，默认不超过 50 个中文字符。"
             },
-            "diagram_required": {"type": "boolean"},
-            "diagram_reusable": {"type": "boolean"},
-            "generation_notes": {"type": "string"}
-          }
-        },
-        "learning_analysis": {"$ref": "#/$defs/learning_analysis"},
-        "source": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "pages": {
-              "type": "array",
-              "items": {"type": "integer", "minimum": 1}
+            "solution": {
+              "type": "string",
+              "description": "中文题目解析，默认不超过 50 个中文字符，公式使用 Markdown + LaTeX。"
             },
-            "bbox": {
-              "type": ["array", "null"],
-              "items": {"type": "number"},
-              "minItems": 4,
-              "maxItems": 4
+            "review_guidance": {
+              "type": "string",
+              "description": "中文复习引导，默认不超过 50 个中文字符。"
             }
           }
         },
-        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+        "generation_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "can_generate_similar": {"type": "boolean"},
+            "generation_focus": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "common_distractors": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": ["code", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {"type": "string"},
+        "label": {"type": "string"},
+        "role": {
+          "type": "string",
+          "enum": ["primary", "secondary", "supporting", "unknown"]
+        }
       }
     },
     "content_block": {
       "type": "object",
       "required": ["type"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "type": {
           "type": "string",
@@ -184,95 +152,10 @@
         "alt": {"type": "string"}
       }
     },
-    "learning_analysis": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "language": {"type": "string"},
-        "exam_focus_text": {
-          "type": "string",
-          "description": "Short Chinese student-facing focus text, normally <= 50 Chinese characters."
-        },
-        "exam_focus": {
-          "type": "array",
-          "description": "Student-facing exam focus points derived from structured knowledge_points.",
-          "items": {"$ref": "#/$defs/exam_focus_item"}
-        },
-        "solution": {"$ref": "#/$defs/solution"},
-        "review_guidance": {"$ref": "#/$defs/review_guidance"}
-      }
-    },
-    "exam_focus_item": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "title": {"type": "string"},
-        "description": {"type": "string"},
-        "source_knowledge_points": {
-          "type": "array",
-          "items": {"type": "string"}
-        }
-      }
-    },
-    "solution": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "status": {"type": "string", "enum": ["placeholder", "generated", "reviewed"]},
-        "summary": {"type": "string"},
-        "steps": {
-          "type": "array",
-          "items": {"$ref": "#/$defs/solution_step"}
-        },
-        "final_answer": {"type": "string"},
-        "distractor_analysis": {
-          "type": "array",
-          "items": {"$ref": "#/$defs/distractor_analysis_item"}
-        }
-      }
-    },
-    "solution_step": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "index": {"type": "integer"},
-        "title": {"type": "string"},
-        "content": {"type": "string"},
-        "formula": {"type": "string"}
-      }
-    },
-    "distractor_analysis_item": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "option": {"type": "string"},
-        "reason": {"type": "string"}
-      }
-    },
-    "review_guidance": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "status": {"type": "string", "enum": ["placeholder", "generated", "reviewed"]},
-        "summary": {"type": "string"},
-        "recommended_topics": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "practice_suggestions": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "common_mistakes": {
-          "type": "array",
-          "items": {"type": "string"}
-        }
-      }
-    },
     "option": {
       "type": "object",
       "required": ["label", "text"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "label": {"type": "string"},
         "text": {"type": "string"}
@@ -281,148 +164,31 @@
     "image": {
       "type": "object",
       "required": ["type", "alt"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "type": {"type": "string", "enum": ["svg", "image", "table", "other"]},
+        "id": {"type": "string"},
+        "type": {
+          "type": "string",
+          "enum": ["svg", "image", "table", "other"]
+        },
         "diagram_type": {
           "type": "string",
-          "enum": [
-            "geometry",
-            "coordinate_graph",
-            "circuit",
-            "force_diagram",
-            "statistical_chart",
-            "table",
-            "other"
-          ]
+          "enum": ["geometry", "coordinate_graph", "circuit", "force_diagram", "statistical_chart", "table", "other"]
         },
         "alt": {"type": "string"},
         "code": {"type": "string"},
+        "svg": {"type": "string"},
         "src": {"type": "string"},
-        "semantic": {"$ref": "#/$defs/diagram_semantic"},
-        "graph_schema": {"$ref": "#/$defs/graph_schema"},
-        "quality": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "visual_similarity": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
-            "semantic_confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
-            "needs_human_review": {"type": "boolean"}
-          }
-        }
+        "semantic": {"type": "object"},
+        "graph_schema": {"type": "object"}
       },
       "anyOf": [
         {"required": ["code"]},
+        {"required": ["svg"]},
         {"required": ["src"]},
-        {"required": ["semantic"]}
+        {"required": ["semantic"]},
+        {"required": ["graph_schema"]}
       ]
-    },
-    "diagram_semantic": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "geometry": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "points": {"type": "array", "items": {"type": "string"}},
-            "shapes": {"type": "array", "items": {"type": "string"}},
-            "ratio_relations": {"type": "array", "items": {"type": "string"}},
-            "parallel_relations": {"type": "array", "items": {"type": "string"}},
-            "perpendicular_relations": {"type": "array", "items": {"type": "string"}},
-            "circle_relations": {"type": "array", "items": {"type": "string"}}
-          }
-        },
-        "coordinate_graph": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "x_axis": {"type": "string"},
-            "y_axis": {"type": "string"},
-            "graph_kind": {"type": "string"}
-          }
-        },
-        "circuit": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "components": {"type": "array", "items": {"type": "object"}},
-            "connections": {"type": "array"}
-          }
-        },
-        "force_diagram": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "objects": {"type": "array", "items": {"type": "string"}},
-            "forces": {"type": "array", "items": {"type": "object"}}
-          }
-        },
-        "statistical_chart": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "data_description": {"type": "string"},
-            "series": {"type": "array"}
-          }
-        }
-      }
-    },
-    "graph_schema": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "coordinate_system": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {"type": "number"},
-            "minItems": 2,
-            "maxItems": 2
-          },
-          "description": "geometry 必填。点名到坐标的映射，例如 {\"A\":[0,0],\"B\":[1,0]}。"
-        },
-        "constraints": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "几何约束，例如 AB:BC=1:2, AB parallel CD, O is circle center。"
-        },
-        "derived_points": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {"type": "number"},
-            "minItems": 2,
-            "maxItems": 2
-          }
-        },
-        "x_label": {"type": "string"},
-        "y_label": {"type": "string"},
-        "points": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {"type": "number"},
-            "minItems": 2,
-            "maxItems": 2
-          }
-        },
-        "curve": {"type": "string", "enum": ["line", "curve", "bar", "scatter", "other"]},
-        "components": {"type": "array", "items": {"type": "object"}},
-        "connections": {"type": "array"}
-      }
-    },
-    "variable_parameter": {
-      "type": "object",
-      "required": ["name", "role"],
-      "additionalProperties": true,
-      "properties": {
-        "name": {"type": "string"},
-        "role": {"type": "string"},
-        "value": {"type": ["string", "number", "null"]},
-        "unit": {"type": ["string", "null"]},
-        "constraints": {"type": "array", "items": {"type": "string"}}
-      }
     }
   }
 }

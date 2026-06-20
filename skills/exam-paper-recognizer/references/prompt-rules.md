@@ -73,43 +73,33 @@ validate with scripts/validate_question_json.py <json> --max-question 10
       "topic": "Mechanics (力学)",
       "topic_code": "131000",
       "question_type": "graph_interpretation",
-      "difficulty": {"level": "medium", "score": 0.55, "reason": "Requires interpreting a linear graph and applying spring energy relationships."},
+      "difficulty": "medium",
+      "syllabus_points": [
+        {"code": "131004", "label": "Energy, work & power (能量、功与功率)", "role": "primary"},
+        {"code": "111001", "label": "Unit conversion (单位换算)", "role": "secondary"}
+      ],
       "knowledge_points": [
-        {"code": "131004", "label": "Energy, work & power (能量、功与功率)", "role": "primary", "confidence": 0.9}
+        {"code": "P3.3", "label": "Force and extension (力与伸长)", "role": "primary"},
+        {"code": "P3.7", "label": "Energy (能量)", "role": "secondary"},
+        {"code": "M1.2", "label": "Unit conversion (单位换算)", "role": "secondary"}
       ],
       "skills": ["graph interpretation", "unit conversion"],
       "learning_analysis": {
-        "exam_focus": [
-          {
-            "title": "Spring potential energy",
-            "description": "Interpret the relationship between stored energy and extension.",
-            "source_knowledge_points": ["131004"]
-          }
-        ],
-        "solution": {
-          "status": "placeholder",
-          "summary": "",
-          "steps": [],
-          "final_answer": "",
-          "distractor_analysis": []
-        },
-        "review_guidance": {
-          "status": "placeholder",
-          "summary": "",
-          "recommended_topics": [],
-          "practice_suggestions": [],
-          "common_mistakes": []
-        }
+        "exam_focus": "考查弹簧能量、图像读数与单位换算。",
+        "solution": "由图得 $x^2=25$，换成米后代入 $E=\\frac12Fx$。",
+        "review_guidance": "复习弹性势能公式、图像变量和单位换算。"
       },
       "generation_profile": {
         "can_generate_similar": true,
-        "similarity_template": "Change the graph scale and ask for force or energy using the same physical relation.",
-        "variable_parameters": [
-          {"name": "stored_energy", "role": "target value", "value": "0.015", "unit": "J"}
+        "generation_focus": [
+          "改变图像斜率",
+          "改变能量或伸长量",
+          "设置单位换算干扰"
         ],
-        "diagram_required": true,
-        "diagram_reusable": true,
-        "generation_notes": "Keep graph linear through origin and adjust labels consistently."
+        "common_distractors": [
+          "误把 $x^2=25$ 当作 $x=25$",
+          "忘记 cm 到 m 的换算"
+        ]
       }
     }
   ]
@@ -118,33 +108,45 @@ validate with scripts/validate_question_json.py <json> --max-question 10
 
 ## ESAT 考纲 code 匹配规则
 
-- ESAT/ENGAA 风格试题默认使用 `references/esat-knowledge-tree.json` 作为知识点依赖。
-- 这份依赖是 Element UI tree 形态，每个节点只有 `code`、`label` 和可选 `children`。
-- `subject_code` 必须匹配第 1 层科目节点，例如 `130000`；`subject` 使用该节点的英文科目名或完整 label。
-- `topic_code` 必须匹配第 2 层一级考点节点，例如 `132000`；`topic` 使用该节点的完整 label。
-- `knowledge_points` 只能选择第 3 层知识点节点，不要选择 exam、subject 或 topic 父节点。
+- ESAT/ENGAA 风格试题必须同时使用两套考纲依赖：
+  - `references/esat-knowledge-tree.json`：项目左侧简版考纲 tree，供 `syllabus_points` 使用。
+  - `references/esat-medium-knowledge-tree.json`：medium/official 考纲 tree，供 `knowledge_points` 使用。
+- 两份依赖都是 Element UI tree 形态，每个节点只有 `code`、`label` 和可选 `children`。
+- `subject_code`、`topic`、`topic_code` 必须由 `syllabus_points` 的主考点在简版考纲树中的父级路径推导：
+  - `subject_code` 对应科目节点 code，例如 `130000`。
+  - `topic` 对应下一层 topic 节点 label，例如 `Mechanics (力学)`。
+  - `topic_code` 对应下一层 topic 节点 code，例如 `131000`。
+- 如果一道题有多个 `syllabus_points`，使用 `role: "primary"` 的点推导；没有 primary 时使用第一个点推导。
+- `syllabus_points` 只能选择简版考纲 tree 的叶子节点，不要选择 exam、subject 或 topic 父节点。
+- `knowledge_points` 只能选择 medium 考纲 tree 的叶子节点，不要选择父节点。
+- 每个 `syllabus_points[]` 至少输出：
+  ```json
+  {"code": "132001", "label": "Circuits (电路)", "role": "primary"}
+  ```
 - 每个 `knowledge_points[]` 至少输出：
   ```json
-  {"code": "132001", "label": "Circuits (电路)", "role": "primary", "confidence": 0.96}
+  {"code": "P1.2", "label": "Electric circuits (电路)", "role": "primary"}
   ```
-- `code` 和 `label` 必须与 `esat-knowledge-tree.json` 中的节点保持一致，不要自由发明 code、缩写或新 label。
-- 一道题可以对应多个知识点；主考点设置 `role: "primary"`，辅助考点设置 `role: "secondary"`。
-- 如果题目涉及跨知识点综合，保留多个 `knowledge_points`，并将 `difficulty.level` 优先标为 `composite`。
-- `learning_analysis.exam_focus` 可以引用 `source_knowledge_points`，此处优先填写知识点 code，例如 `["132001", "132002"]`。
-- 如果无法精确匹配，选择最接近的第 3 层节点并降低 `confidence`；不要输出不存在于考纲树的 code。
+- `code` 和 `label` 必须与各自依赖文件中的节点保持一致，不要自由发明 code、缩写或新 label。
+- `knowledge_points[].label` 不要重复包含 code，不要写成 `P1.2 Electric circuits (电路)`。
+- 不要在 `syllabus_points[]` 或 `knowledge_points[]` 中输出 `confidence`；复核信息只写入 artifacts，不写入 final JSON。
+- 一道题可以对应多个 `syllabus_points` 和多个 `knowledge_points`；主考点设置 `role: "primary"`，辅助考点设置 `role: "secondary"`。
+- 如果题目涉及跨知识点综合，保留多个知识点，并将 `difficulty` 优先标为 `composite`。
+- 如果无法精确匹配，选择最接近的叶子节点，并在 artifacts 中说明；不要输出不存在于考纲树的 code。
 
 ## 学生侧解析字段
 
-- `knowledge_points` 是结构化知识标签，用于检索、归类、统计和后续生成。
+- `syllabus_points` 是前端筛选标签，对应左侧简版 tree。
+- `knowledge_points` 是 medium 粒度结构化知识标签，用于诊断报告、同类题生成和更细归类。
 - `learning_analysis.exam_focus` 是学生可见的“考察点”，通常由 `knowledge_points` 派生，但表述应更接近前端展示文案。
-- `learning_analysis.solution` 是题目解析字段；如果当前只做试卷识别，不生成完整解析，保留 `status: "placeholder"`、空 `summary`、空 `steps`、空 `distractor_analysis`。
+- `learning_analysis.solution` 是题目解析字段；只输出短文本，不要输出 `status`、`summary`、`steps`、`final_answer`、`distractor_analysis` 等嵌套过程字段。
 - `learning_analysis.review_guidance` 是复习引导字段；它可以参考 `knowledge_points`、`skills`、`difficulty` 和错因分析生成，但不等同于 `generation_profile`。
-- `generation_profile` 只用于同类题生成，包含变量模板、可替换参数、图形复用策略；不要把学生可见解析文本放进 `generation_profile`。
+- `generation_profile` 只用于同类题生成，默认只保留 `can_generate_similar`、`generation_focus`、`common_distractors`。
 - 学生侧解析默认使用中文，写给中文学生看；不要输出英文解释。
-- 默认生成短版三段：`exam_focus_text`、`solution.summary`、`review_guidance.summary`。每段不超过 50 个中文字符。
+- 默认生成短版三段：`learning_analysis.exam_focus`、`learning_analysis.solution`、`learning_analysis.review_guidance`。每段不超过 50 个中文字符。
 - 如果解析涉及数学或物理公式，公式仍使用 Markdown + LaTeX，例如 `$P=VI$`、`$\\sqrt{10}$`。
-- 除非用户明确要求详细解析，`solution.steps` 可以为空；不要为了填充字段生成冗长步骤。
-- `exam_focus_text` 对应前端“考察点”，`solution.summary` 对应“题目解析”，`review_guidance.summary` 对应“复习引导”。
+- 不要为了填充字段生成冗长步骤。
+- `learning_analysis.exam_focus` 对应前端“考察点”，`learning_analysis.solution` 对应“题目解析”，`learning_analysis.review_guidance` 对应“复习引导”。
 
 ## 难度分层规则
 
@@ -152,25 +154,15 @@ validate with scripts/validate_question_json.py <json> --max-question 10
 - `medium` / 中等：需要多步推导、公式变形、比例/单位处理或对基础公式做灵活应用，但知识点主线相对单一。
 - `hard` / 困难：包含生僻考点、复杂场景变换、严谨证明、隐含条件较多或高认知负荷推理。
 - `composite` / 复合：跨知识点或跨章节综合，例如图像解读 + 单位换算 + 物理公式，几何约束 + 比例 + 代数面积计算，电路拓扑 + 功率 + 并联电阻。复合题不一定比 `hard` 更难，但需要多个知识点串联。
-- 如果一道题同时满足 `medium` 和 `composite`，优先标为 `composite`，并在 `difficulty.reason` 说明涉及的知识点组合。
+- 如果一道题同时满足 `medium` 和 `composite`，优先标为 `composite`。不要输出难度解释、分数、rubric 或中文 label；前端负责枚举值展示。
 
 ## 答案 Key 识别规则
 
 - 当用户同时提供 question paper 和 answer key / mark scheme / 答案 PDF 时，必须解析答案文件并按题号填入 `questions[].answer`。
 - answer key 常见格式包括表格、`Q1 A`、`Question 1: A`、或题号与答案分行。解析时优先使用文本层；文本层不可靠时再用页面图像核验。
 - `answer` 统一为数组，例如单选题为 `["A"]`，多选题为 `["A", "C"]`。
-- 合并答案后必须写入：
-  ```json
-  {
-    "answer_source": {
-      "type": "answer_key_pdf",
-      "source_pdf": "path/to/answer-key.pdf",
-      "confidence": 0.99,
-      "matched_by": "question_number"
-    }
-  }
-  ```
-- 如果答案 key 与试题 JSON 的题号范围不一致，在根级 `answer_key.missing_question_numbers_in_json` 或题目 `quality.validation_notes` 中记录。
+- 合并答案后只写入 `questions[].answer`，不要写入 `answer_source`。
+- 如果答案 key 与试题 JSON 的题号范围不一致，在 artifacts 中记录，不要写入 final JSON。
 - 不要根据模型推理解答覆盖 answer key；正式答案以 answer key 为准。模型推理答案只能写入解析字段或备注。
 
 长期 canonical 结构：
@@ -305,7 +297,7 @@ validate with scripts/validate_question_json.py <json> --max-question 10
 - `force_diagram`: 必须检查受力对象、力的方向和标签。
 - `statistical_chart`: 必须检查数据系列、坐标/类别标签和图形类型。
 
-自检结果写入质量字段：
+自检结果只写入 artifacts 中的审核记录，不要写入 final JSON。建议 artifacts 中使用类似结构：
 
 ```json
 {

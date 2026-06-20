@@ -1,0 +1,1418 @@
+[
+  {
+    "code": "ESAT",
+    "label": "ESAT (?????????)",
+    "children": [
+      {
+        "code": "M",
+        "label": "Mathematics 1 (数学1)",
+        "children": [
+          {
+            "code": "M1",
+            "label": "Units (单位)",
+            "children": [
+              {
+                "code": "M1.1",
+                "label": "Standard and compound units (标准单位与复合单位)"
+              },
+              {
+                "code": "M1.2",
+                "label": "Unit conversion (单位换算)"
+              }
+            ]
+          },
+          {
+            "code": "M2",
+            "label": "Number (数)",
+            "children": [
+              {
+                "code": "M2.1",
+                "label": "Order numbers and inequality symbols (数的大小与不等号)"
+              },
+              {
+                "code": "M2.2",
+                "label": "Four operations and place value (四则运算与位值)"
+              },
+              {
+                "code": "M2.3",
+                "label": "Primes, factors and multiples (素数、因数与倍数)"
+              },
+              {
+                "code": "M2.4",
+                "label": "Inverse operations and order of operations (逆运算与运算顺序)"
+              },
+              {
+                "code": "M2.5",
+                "label": "Systematic listing strategies (系统列举策略)"
+              },
+              {
+                "code": "M2.6",
+                "label": "Squares, roots, cubes and cube roots (平方、根、立方)"
+              },
+              {
+                "code": "M2.7",
+                "label": "Index laws for numbers (数值指数律)"
+              },
+              {
+                "code": "M2.8",
+                "label": "Standard form (科学计数法)"
+              },
+              {
+                "code": "M2.9",
+                "label": "Decimals, percentages and fractions (小数、百分数与分数转换)"
+              },
+              {
+                "code": "M2.10",
+                "label": "Fractions, decimals and percentages in calculations (分数小数百分数计算)"
+              },
+              {
+                "code": "M2.11",
+                "label": "Exact calculation with fractions, surds and pi (分数、根式与π的精确计算)"
+              },
+              {
+                "code": "M2.12",
+                "label": "Upper and lower bounds (上下界)"
+              },
+              {
+                "code": "M2.13",
+                "label": "Rounding and error intervals (取近似与误差区间)"
+              },
+              {
+                "code": "M2.14",
+                "label": "Estimation (估算)"
+              }
+            ]
+          },
+          {
+            "code": "M3",
+            "label": "Ratio and proportion (比与比例)",
+            "children": [
+              {
+                "code": "M3.1",
+                "label": "Scale factors, diagrams and maps (比例因子、比例图与地图)"
+              },
+              {
+                "code": "M3.2",
+                "label": "Quantity as a fraction of another (一个量占另一个量的分数)"
+              },
+              {
+                "code": "M3.3",
+                "label": "Ratio notation (比的记号)"
+              },
+              {
+                "code": "M3.4",
+                "label": "Dividing in a ratio (按比例分配)"
+              },
+              {
+                "code": "M3.5",
+                "label": "Ratio in real contexts (实际情境中的比)"
+              },
+              {
+                "code": "M3.6",
+                "label": "Proportion and links to fractions/functions (比例与分数/函数)"
+              },
+              {
+                "code": "M3.7",
+                "label": "Fractions in ratio problems (比例题中的分数)"
+              },
+              {
+                "code": "M3.8",
+                "label": "Percentages and percentage change (百分比与百分比变化)"
+              },
+              {
+                "code": "M3.9",
+                "label": "Direct and inverse proportion (正比例与反比例)"
+              },
+              {
+                "code": "M3.10",
+                "label": "Ratio of lengths, areas and volumes (长度、面积、体积比)"
+              },
+              {
+                "code": "M3.11",
+                "label": "Growth, decay and iterative processes (增长、衰减与迭代)"
+              }
+            ]
+          },
+          {
+            "code": "M4",
+            "label": "Algebra (代数)",
+            "children": [
+              {
+                "code": "M4.1",
+                "label": "Algebraic notation (代数记号)"
+              },
+              {
+                "code": "M4.2",
+                "label": "Algebraic index laws (代数指数律)"
+              },
+              {
+                "code": "M4.3",
+                "label": "Substitution and algebraic vocabulary (代入与代数术语)"
+              },
+              {
+                "code": "M4.4",
+                "label": "Collect, expand and factorise common factors (合并、展开与提公因式)"
+              },
+              {
+                "code": "M4.5",
+                "label": "Factorising quadratics (二次式因式分解)"
+              },
+              {
+                "code": "M4.6",
+                "label": "Simplifying expressions and rational expressions (表达式与代数分式化简)"
+              },
+              {
+                "code": "M4.7",
+                "label": "Rearranging formulae (公式变形)"
+              },
+              {
+                "code": "M4.8",
+                "label": "Equations, identities and equivalence (方程、恒等式与等价证明)"
+              },
+              {
+                "code": "M4.9",
+                "label": "Coordinates in four quadrants (四象限坐标)"
+              },
+              {
+                "code": "M4.10",
+                "label": "Linear functions, gradients and lines (线性函数、斜率与直线)"
+              },
+              {
+                "code": "M4.11",
+                "label": "Quadratic graphs, roots and turning points (二次图像、根与转折点)"
+              },
+              {
+                "code": "M4.12",
+                "label": "Recognise, sketch and interpret common graphs (常见函数图像)"
+              },
+              {
+                "code": "M4.13",
+                "label": "Graphs in real contexts (实际情境中的图像)"
+              },
+              {
+                "code": "M4.14",
+                "label": "Gradients and areas under graphs (图像斜率与面积)"
+              },
+              {
+                "code": "M4.15",
+                "label": "Equations and simultaneous equations (方程与联立方程)"
+              },
+              {
+                "code": "M4.16",
+                "label": "Quadratic equations (二次方程)"
+              },
+              {
+                "code": "M4.17",
+                "label": "Linear inequalities (一次不等式)"
+              },
+              {
+                "code": "M4.18",
+                "label": "Generating sequences (生成数列)"
+              },
+              {
+                "code": "M4.19",
+                "label": "nth term of sequences (数列第n项)"
+              }
+            ]
+          },
+          {
+            "code": "M5",
+            "label": "Geometry (几何)",
+            "children": [
+              {
+                "code": "M5.1",
+                "label": "Geometric terms and notation (几何术语与记号)"
+              },
+              {
+                "code": "M5.2",
+                "label": "Angle properties (角度性质)"
+              },
+              {
+                "code": "M5.3",
+                "label": "Quadrilaterals and triangles (四边形与三角形性质)"
+              },
+              {
+                "code": "M5.4",
+                "label": "Triangle congruence (三角形全等)"
+              },
+              {
+                "code": "M5.5",
+                "label": "Angle facts, congruence and similarity arguments (角、全等与相似推理)"
+              },
+              {
+                "code": "M5.6",
+                "label": "Transformations and vectors (几何变换与平移向量)"
+              },
+              {
+                "code": "M5.7",
+                "label": "Pythagoras' theorem (勾股定理)"
+              },
+              {
+                "code": "M5.8",
+                "label": "Circle terminology (圆的术语)"
+              },
+              {
+                "code": "M5.9",
+                "label": "Circle theorems (圆定理)"
+              },
+              {
+                "code": "M5.10",
+                "label": "Coordinate geometry problems (坐标几何问题)"
+              },
+              {
+                "code": "M5.11",
+                "label": "3D shape terminology (三维图形术语)"
+              },
+              {
+                "code": "M5.12",
+                "label": "Plans and elevations (平面图与立面图)"
+              },
+              {
+                "code": "M5.13",
+                "label": "Maps, scale drawings and bearings (地图、比例图与方位角)"
+              },
+              {
+                "code": "M5.14",
+                "label": "Areas and volumes of basic shapes (基础图形面积与体积)"
+              },
+              {
+                "code": "M5.15",
+                "label": "Circles, cylinders and composite solids (圆、圆柱与复合立体)"
+              },
+              {
+                "code": "M5.16",
+                "label": "Arcs and sectors (弧长与扇形)"
+              },
+              {
+                "code": "M5.17",
+                "label": "Congruence, similarity and scale relationships (全等、相似与比例关系)"
+              },
+              {
+                "code": "M5.18",
+                "label": "Right-triangle trigonometry (直角三角形三角比)"
+              },
+              {
+                "code": "M5.19",
+                "label": "Vectors and geometric arguments (向量与几何论证)"
+              }
+            ]
+          },
+          {
+            "code": "M6",
+            "label": "Statistics (统计)",
+            "children": [
+              {
+                "code": "M6.1",
+                "label": "Tables, charts and diagrams (表格、图表与图示)"
+              },
+              {
+                "code": "M6.2",
+                "label": "Grouped data diagrams and histograms (分组数据图与直方图)"
+              },
+              {
+                "code": "M6.3",
+                "label": "Summary statistics and comparisons (统计量与比较)"
+              },
+              {
+                "code": "M6.4",
+                "label": "Scatter graphs and correlation (散点图与相关性)"
+              }
+            ]
+          },
+          {
+            "code": "M7",
+            "label": "Probability (概率)",
+            "children": [
+              {
+                "code": "M7.1",
+                "label": "Frequency of outcomes (结果频率)"
+              },
+              {
+                "code": "M7.2",
+                "label": "Randomness and expected outcomes (随机性与期望结果)"
+              },
+              {
+                "code": "M7.3",
+                "label": "Relative frequency and probability scale (相对频率与概率尺度)"
+              },
+              {
+                "code": "M7.4",
+                "label": "Exhaustive and mutually exclusive events (完备与互斥事件)"
+              },
+              {
+                "code": "M7.5",
+                "label": "Systematic enumeration (系统列举)"
+              },
+              {
+                "code": "M7.6",
+                "label": "Theoretical possibility spaces (理论样本空间)"
+              },
+              {
+                "code": "M7.7",
+                "label": "Add/multiply probabilities and conditional probability (加乘概率与条件概率)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "B",
+        "label": "Biology (生物)",
+        "children": [
+          {
+            "code": "B1",
+            "label": "Cells (细胞)",
+            "children": [
+              {
+                "code": "B1.1",
+                "label": "Eukaryotic cell structure and function (真核细胞结构与功能)"
+              },
+              {
+                "code": "B1.2",
+                "label": "Prokaryotic cell structure and function (原核细胞结构与功能)"
+              },
+              {
+                "code": "B1.3",
+                "label": "Levels of organisation (生物体层级)"
+              }
+            ]
+          },
+          {
+            "code": "B2",
+            "label": "Movement across membranes (跨膜运输)",
+            "children": [
+              {
+                "code": "B2.1",
+                "label": "Diffusion, osmosis and active transport (扩散、渗透与主动运输)"
+              }
+            ]
+          },
+          {
+            "code": "B3",
+            "label": "Cell division and sex determination (细胞分裂与性别决定)",
+            "children": [
+              {
+                "code": "B3.1",
+                "label": "Mitosis and the cell cycle (有丝分裂与细胞周期)"
+              },
+              {
+                "code": "B3.2",
+                "label": "Meiosis and the cell cycle (减数分裂与细胞周期)"
+              },
+              {
+                "code": "B3.3",
+                "label": "Asexual and sexual reproduction (无性与有性繁殖)"
+              },
+              {
+                "code": "B3.4",
+                "label": "Sex determination (性别决定)"
+              }
+            ]
+          },
+          {
+            "code": "B4",
+            "label": "Inheritance (遗传)",
+            "children": [
+              {
+                "code": "B4.1",
+                "label": "Nucleus as genetic material site (细胞核与遗传物质)"
+              },
+              {
+                "code": "B4.2",
+                "label": "Genetic terms (遗传术语)"
+              },
+              {
+                "code": "B4.3",
+                "label": "Monohybrid crosses and pedigrees (单基因杂交与家系图)"
+              }
+            ]
+          },
+          {
+            "code": "B5",
+            "label": "DNA",
+            "children": [
+              {
+                "code": "B5.1",
+                "label": "Genome and chromosomes (基因组与染色体)"
+              },
+              {
+                "code": "B5.2",
+                "label": "DNA structure (DNA结构)"
+              },
+              {
+                "code": "B5.3",
+                "label": "Protein synthesis (蛋白质合成)"
+              },
+              {
+                "code": "B5.4",
+                "label": "Gene mutations (基因突变)"
+              }
+            ]
+          },
+          {
+            "code": "B6",
+            "label": "Gene technologies (基因技术)",
+            "children": [
+              {
+                "code": "B6.1",
+                "label": "Genetic engineering (基因工程)"
+              },
+              {
+                "code": "B6.2",
+                "label": "Stem cells (干细胞)"
+              },
+              {
+                "code": "B6.3",
+                "label": "Selective breeding (选择育种)"
+              }
+            ]
+          },
+          {
+            "code": "B7",
+            "label": "Variation (变异)",
+            "children": [
+              {
+                "code": "B7.1",
+                "label": "Natural selection and evolution (自然选择与进化)"
+              },
+              {
+                "code": "B7.2",
+                "label": "Sources of variation (变异来源)"
+              }
+            ]
+          },
+          {
+            "code": "B8",
+            "label": "Enzymes (酶)",
+            "children": [
+              {
+                "code": "B8.1",
+                "label": "Enzymes as biological catalysts (酶作为生物催化剂)"
+              },
+              {
+                "code": "B8.2",
+                "label": "Enzyme action and specificity (酶作用机制与专一性)"
+              },
+              {
+                "code": "B8.3",
+                "label": "Temperature and pH effects (温度与pH影响)"
+              },
+              {
+                "code": "B8.4",
+                "label": "Digestive enzymes (消化酶)"
+              }
+            ]
+          },
+          {
+            "code": "B9",
+            "label": "Animal physiology (动物生理)",
+            "children": [
+              {
+                "code": "B9.1",
+                "label": "Respiration (呼吸作用)"
+              },
+              {
+                "code": "B9.2",
+                "label": "Organ systems (器官系统)"
+              },
+              {
+                "code": "B9.3",
+                "label": "Homeostasis (稳态)"
+              },
+              {
+                "code": "B9.4",
+                "label": "Hormones (激素)"
+              },
+              {
+                "code": "B9.5",
+                "label": "Disease and body defence (疾病与身体防御)"
+              }
+            ]
+          },
+          {
+            "code": "B10",
+            "label": "Ecosystems (生态系统)",
+            "children": [
+              {
+                "code": "B10.1",
+                "label": "Levels of organisation in ecosystems (生态系统层级)"
+              },
+              {
+                "code": "B10.2",
+                "label": "Material cycling (物质循环)"
+              },
+              {
+                "code": "B10.3",
+                "label": "Biodiversity (生物多样性)"
+              }
+            ]
+          },
+          {
+            "code": "B11",
+            "label": "Plant physiology (植物生理)",
+            "children": [
+              {
+                "code": "B11.1",
+                "label": "Photosynthesis (光合作用)"
+              },
+              {
+                "code": "B11.2",
+                "label": "Plant transport systems (植物运输系统)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "C",
+        "label": "Chemistry (化学)",
+        "children": [
+          {
+            "code": "C1",
+            "label": "Atomic structure (原子结构)",
+            "children": [
+              {
+                "code": "C1.1",
+                "label": "Atomic model (原子模型)"
+              },
+              {
+                "code": "C1.2",
+                "label": "Relative masses and charges (相对质量与电荷)"
+              },
+              {
+                "code": "C1.3",
+                "label": "Atomic number, mass number and notation (原子序数、质量数与记号)"
+              },
+              {
+                "code": "C1.4",
+                "label": "Electron configurations (电子排布)"
+              },
+              {
+                "code": "C1.5",
+                "label": "Isotopes and abundance data (同位素与丰度数据)"
+              },
+              {
+                "code": "C1.6",
+                "label": "Relative atomic mass (相对原子质量)"
+              }
+            ]
+          },
+          {
+            "code": "C2",
+            "label": "Periodic Table (周期表)",
+            "children": [
+              {
+                "code": "C2.1",
+                "label": "Periods and groups (周期与族)"
+              },
+              {
+                "code": "C2.2",
+                "label": "Arrangement by atomic number (按原子序数排列)"
+              },
+              {
+                "code": "C2.3",
+                "label": "Metals and non-metals in the table (金属与非金属位置)"
+              },
+              {
+                "code": "C2.4",
+                "label": "Position and electron configuration (位置与电子排布)"
+              },
+              {
+                "code": "C2.5",
+                "label": "Group properties and reactivity trends (族性质与反应性趋势)"
+              }
+            ]
+          },
+          {
+            "code": "C3",
+            "label": "Chemical reactions, formulae and equations (反应、式与方程)",
+            "children": [
+              {
+                "code": "C3.1",
+                "label": "Rearrangement of atoms and electrons (原子与电子重排)"
+              },
+              {
+                "code": "C3.2",
+                "label": "Formulae of common compounds (常见化合物化学式)"
+              },
+              {
+                "code": "C3.3",
+                "label": "State symbols (状态符号)"
+              },
+              {
+                "code": "C3.4",
+                "label": "Constructing and balancing equations (构造与配平方程)"
+              },
+              {
+                "code": "C3.5",
+                "label": "Reversible reactions and equilibrium (可逆反应与平衡)"
+              }
+            ]
+          },
+          {
+            "code": "C4",
+            "label": "Quantitative chemistry (定量化学)",
+            "children": [
+              {
+                "code": "C4.1",
+                "label": "Relative molar mass (相对分子/式量)"
+              },
+              {
+                "code": "C4.2",
+                "label": "Avogadro's number (阿伏伽德罗常数)"
+              },
+              {
+                "code": "C4.3",
+                "label": "Moles and mass conversions (摩尔与质量换算)"
+              },
+              {
+                "code": "C4.4",
+                "label": "Percentage composition by mass (质量百分组成)"
+              },
+              {
+                "code": "C4.5",
+                "label": "Empirical and molecular formulae (经验式与分子式)"
+              },
+              {
+                "code": "C4.6",
+                "label": "Mass calculations from equations (方程质量计算)"
+              },
+              {
+                "code": "C4.7",
+                "label": "Equations from mass or gas-volume data (由质量/气体体积构造方程)"
+              },
+              {
+                "code": "C4.8",
+                "label": "Gas volume and moles (气体体积与摩尔数)"
+              },
+              {
+                "code": "C4.9",
+                "label": "Solutions and concentration (溶液与浓度)"
+              },
+              {
+                "code": "C4.10",
+                "label": "Titration calculations (滴定计算)"
+              },
+              {
+                "code": "C4.11",
+                "label": "Percentage yield (百分产率)"
+              }
+            ]
+          },
+          {
+            "code": "C5",
+            "label": "Oxidation, reduction and redox (氧化、还原与氧化还原)",
+            "children": [
+              {
+                "code": "C5.1",
+                "label": "Oxygen-based oxidation/reduction (基于氧的氧化还原)"
+              },
+              {
+                "code": "C5.2",
+                "label": "Electron transfer redox (电子转移氧化还原)"
+              },
+              {
+                "code": "C5.3",
+                "label": "Oxidation states (氧化态)"
+              },
+              {
+                "code": "C5.4",
+                "label": "Identifying redox reactions (识别氧化还原反应)"
+              },
+              {
+                "code": "C5.5",
+                "label": "Disproportionation (歧化反应)"
+              },
+              {
+                "code": "C5.6",
+                "label": "Oxidising and reducing agents (氧化剂与还原剂)"
+              }
+            ]
+          },
+          {
+            "code": "C6",
+            "label": "Chemical bonding, structure and properties (化学键、结构与性质)",
+            "children": [
+              {
+                "code": "C6.1",
+                "label": "Elements, compounds and mixtures (元素、化合物与混合物)"
+              },
+              {
+                "code": "C6.2",
+                "label": "Noble-gas configurations and bonding type (稀有气体结构与成键类型)"
+              },
+              {
+                "code": "C6.3",
+                "label": "Ionic bonding (离子键)"
+              },
+              {
+                "code": "C6.4",
+                "label": "Covalent bonding (共价键)"
+              },
+              {
+                "code": "C6.5",
+                "label": "Metallic bonding (金属键)"
+              },
+              {
+                "code": "C6.6",
+                "label": "Intermolecular forces (分子间作用力)"
+              },
+              {
+                "code": "C6.7",
+                "label": "Structure, bonding and physical properties (结构成键与物理性质)"
+              }
+            ]
+          },
+          {
+            "code": "C7",
+            "label": "Group chemistry (族化学)",
+            "children": [
+              {
+                "code": "C7.1",
+                "label": "Alkali metals, halogens and noble gases (碱金属、卤素与稀有气体)"
+              },
+              {
+                "code": "C7.2",
+                "label": "Alkali metal trends (碱金属趋势)"
+              },
+              {
+                "code": "C7.3",
+                "label": "Halogen trends and displacement (卤素趋势与置换)"
+              }
+            ]
+          },
+          {
+            "code": "C8",
+            "label": "Separation techniques (分离技术)",
+            "children": [
+              {
+                "code": "C8.1",
+                "label": "Chemical displacement from compounds (化合物中置换元素)"
+              },
+              {
+                "code": "C8.2",
+                "label": "Physical separation of mixtures (混合物物理分离)"
+              },
+              {
+                "code": "C8.3",
+                "label": "Choosing separation techniques (选择分离方法)"
+              },
+              {
+                "code": "C8.4",
+                "label": "Purity by chromatography (色谱判断纯度)"
+              }
+            ]
+          },
+          {
+            "code": "C9",
+            "label": "Acids, bases and salts (酸、碱和盐)",
+            "children": [
+              {
+                "code": "C9.1",
+                "label": "Acids (酸)"
+              },
+              {
+                "code": "C9.2",
+                "label": "Bases (碱)"
+              },
+              {
+                "code": "C9.3",
+                "label": "Neutralisation (中和)"
+              }
+            ]
+          },
+          {
+            "code": "C10",
+            "label": "Rates of reaction (反应速率)",
+            "children": [
+              {
+                "code": "C10.1",
+                "label": "Factors affecting rate (影响速率的因素)"
+              },
+              {
+                "code": "C10.2",
+                "label": "Measuring reaction rate (测量反应速率)"
+              },
+              {
+                "code": "C10.3",
+                "label": "Graphical rate data (速率图像数据)"
+              },
+              {
+                "code": "C10.4",
+                "label": "Collision theory (碰撞理论)"
+              },
+              {
+                "code": "C10.5",
+                "label": "Activation energy (活化能)"
+              },
+              {
+                "code": "C10.6",
+                "label": "Catalysts (催化剂)"
+              }
+            ]
+          },
+          {
+            "code": "C11",
+            "label": "Energetics (能量变化)",
+            "children": [
+              {
+                "code": "C11.1",
+                "label": "Exothermic and endothermic reactions (放热与吸热反应)"
+              },
+              {
+                "code": "C11.2",
+                "label": "Reversible reaction energy direction (可逆反应能量方向)"
+              },
+              {
+                "code": "C11.3",
+                "label": "Energy level diagrams (能级图)"
+              },
+              {
+                "code": "C11.4",
+                "label": "Calorimetry energy changes (量热能量变化)"
+              },
+              {
+                "code": "C11.5",
+                "label": "Bond energy calculations (键能计算)"
+              }
+            ]
+          },
+          {
+            "code": "C12",
+            "label": "Electrolysis (电解)",
+            "children": [
+              {
+                "code": "C12.1",
+                "label": "Electrolysis terms (电解术语)"
+              },
+              {
+                "code": "C12.2",
+                "label": "Direct current in electrolysis (电解中的直流)"
+              },
+              {
+                "code": "C12.3",
+                "label": "Electrode processes (电极过程)"
+              },
+              {
+                "code": "C12.4",
+                "label": "Predicting electrolysis products (预测电解产物)"
+              },
+              {
+                "code": "C12.5",
+                "label": "Half-equations (半方程)"
+              },
+              {
+                "code": "C12.6",
+                "label": "Electroplating (电镀)"
+              }
+            ]
+          },
+          {
+            "code": "C13",
+            "label": "Carbon/Organic chemistry (碳/有机化学)",
+            "children": [
+              {
+                "code": "C13.1",
+                "label": "General organic concepts (有机化学通用概念)"
+              },
+              {
+                "code": "C13.2",
+                "label": "Alkanes (烷烃)"
+              },
+              {
+                "code": "C13.3",
+                "label": "Alkenes (烯烃)"
+              },
+              {
+                "code": "C13.4",
+                "label": "Polymers (聚合物)"
+              },
+              {
+                "code": "C13.5",
+                "label": "Alcohols (醇)"
+              },
+              {
+                "code": "C13.6",
+                "label": "Carboxylic acids (羧酸)"
+              }
+            ]
+          },
+          {
+            "code": "C14",
+            "label": "Metals (金属)",
+            "children": [
+              {
+                "code": "C14.1",
+                "label": "Reactivity and extraction (反应性与提取)"
+              },
+              {
+                "code": "C14.2",
+                "label": "Displacement and reactivity order (置换与反应性顺序)"
+              },
+              {
+                "code": "C14.3",
+                "label": "Uses and properties of metals/alloys (金属/合金用途与性质)"
+              },
+              {
+                "code": "C14.4",
+                "label": "Metal ores and reduction (金属矿石与还原)"
+              },
+              {
+                "code": "C14.5",
+                "label": "Transition metal properties (过渡金属性质)"
+              }
+            ]
+          },
+          {
+            "code": "C15",
+            "label": "Kinetic/Particle theory (动力学/粒子理论)",
+            "children": [
+              {
+                "code": "C15.1",
+                "label": "Particles in states of matter (物态中的粒子)"
+              },
+              {
+                "code": "C15.2",
+                "label": "Changes of state and energy (状态变化与能量)"
+              }
+            ]
+          },
+          {
+            "code": "C16",
+            "label": "Chemical tests (化学检验)",
+            "children": [
+              {
+                "code": "C16.1",
+                "label": "Gas tests (气体检验)"
+              },
+              {
+                "code": "C16.2",
+                "label": "Anion tests (阴离子检验)"
+              },
+              {
+                "code": "C16.3",
+                "label": "Metal cation tests with sodium hydroxide (氢氧化钠检验金属阳离子)"
+              },
+              {
+                "code": "C16.4",
+                "label": "Flame tests (焰色反应)"
+              },
+              {
+                "code": "C16.5",
+                "label": "Test for water (水的检验)"
+              }
+            ]
+          },
+          {
+            "code": "C17",
+            "label": "Air and water (空气与水)",
+            "children": [
+              {
+                "code": "C17.1",
+                "label": "Composition and separation of air (空气组成与分离)"
+              },
+              {
+                "code": "C17.2",
+                "label": "Greenhouse gases (温室气体)"
+              },
+              {
+                "code": "C17.3",
+                "label": "Gaseous pollutants (气态污染物)"
+              },
+              {
+                "code": "C17.4",
+                "label": "Drinking water treatment (饮用水处理)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "P",
+        "label": "Physics (物理)",
+        "children": [
+          {
+            "code": "P1",
+            "label": "Electricity (电学)",
+            "children": [
+              {
+                "code": "P1.1",
+                "label": "Electrostatics (静电)"
+              },
+              {
+                "code": "P1.2",
+                "label": "Electric circuits (电路)"
+              }
+            ]
+          },
+          {
+            "code": "P2",
+            "label": "Magnetism (磁学)",
+            "children": [
+              {
+                "code": "P2.1",
+                "label": "Properties of magnets (磁体性质)"
+              },
+              {
+                "code": "P2.2",
+                "label": "Magnetic field due to current (电流产生的磁场)"
+              },
+              {
+                "code": "P2.3",
+                "label": "Motor effect (电动机效应)"
+              },
+              {
+                "code": "P2.4",
+                "label": "Electromagnetic induction (电磁感应)"
+              },
+              {
+                "code": "P2.5",
+                "label": "Transformers (变压器)"
+              }
+            ]
+          },
+          {
+            "code": "P3",
+            "label": "Mechanics (力学)",
+            "children": [
+              {
+                "code": "P3.1",
+                "label": "Kinematics (运动学)"
+              },
+              {
+                "code": "P3.2",
+                "label": "Forces (力)"
+              },
+              {
+                "code": "P3.3",
+                "label": "Force and extension (力与伸长)"
+              },
+              {
+                "code": "P3.4",
+                "label": "Newton's laws (牛顿定律)"
+              },
+              {
+                "code": "P3.5",
+                "label": "Mass and weight (质量与重量)"
+              },
+              {
+                "code": "P3.6",
+                "label": "Momentum (动量)"
+              },
+              {
+                "code": "P3.7",
+                "label": "Energy (能量)"
+              }
+            ]
+          },
+          {
+            "code": "P4",
+            "label": "Thermal physics (热学)",
+            "children": [
+              {
+                "code": "P4.1",
+                "label": "Conduction (传导)"
+              },
+              {
+                "code": "P4.2",
+                "label": "Convection (对流)"
+              },
+              {
+                "code": "P4.3",
+                "label": "Thermal radiation (热辐射)"
+              },
+              {
+                "code": "P4.4",
+                "label": "Heat capacity (热容)"
+              }
+            ]
+          },
+          {
+            "code": "P5",
+            "label": "Matter (物质)",
+            "children": [
+              {
+                "code": "P5.1",
+                "label": "States of matter (物态)"
+              },
+              {
+                "code": "P5.2",
+                "label": "Ideal gases (理想气体)"
+              },
+              {
+                "code": "P5.3",
+                "label": "State changes (状态变化)"
+              },
+              {
+                "code": "P5.4",
+                "label": "Density (密度)"
+              },
+              {
+                "code": "P5.5",
+                "label": "Pressure (压强)"
+              }
+            ]
+          },
+          {
+            "code": "P6",
+            "label": "Waves (波)",
+            "children": [
+              {
+                "code": "P6.1",
+                "label": "Wave properties (波的性质)"
+              },
+              {
+                "code": "P6.2",
+                "label": "Wave behaviour (波的行为)"
+              },
+              {
+                "code": "P6.3",
+                "label": "Optics (光学)"
+              },
+              {
+                "code": "P6.4",
+                "label": "Sound waves (声波)"
+              },
+              {
+                "code": "P6.5",
+                "label": "Electromagnetic spectrum (电磁波谱)"
+              }
+            ]
+          },
+          {
+            "code": "P7",
+            "label": "Radioactivity (放射性)",
+            "children": [
+              {
+                "code": "P7.1",
+                "label": "Atomic structure (原子结构)"
+              },
+              {
+                "code": "P7.2",
+                "label": "Radioactive decay (放射性衰变)"
+              },
+              {
+                "code": "P7.3",
+                "label": "Ionising radiation (电离辐射)"
+              },
+              {
+                "code": "P7.4",
+                "label": "Half-life (半衰期)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "MM",
+        "label": "Mathematics 2 (数学2)",
+        "children": [
+          {
+            "code": "MM1",
+            "label": "Algebra and functions (代数与函数)",
+            "children": [
+              {
+                "code": "MM1.1",
+                "label": "Laws of indices for rational exponents (有理指数指数律)"
+              },
+              {
+                "code": "MM1.2",
+                "label": "Surds (根式)"
+              },
+              {
+                "code": "MM1.3",
+                "label": "Quadratic functions and equations (二次函数与方程)"
+              },
+              {
+                "code": "MM1.4",
+                "label": "Simultaneous equations by substitution (代入法解联立方程)"
+              },
+              {
+                "code": "MM1.5",
+                "label": "Linear and quadratic inequalities (一次与二次不等式)"
+              },
+              {
+                "code": "MM1.6",
+                "label": "Polynomial manipulation and theorems (多项式操作与定理)"
+              },
+              {
+                "code": "MM1.7",
+                "label": "Functions and common function properties (函数与常见函数性质)"
+              }
+            ]
+          },
+          {
+            "code": "MM2",
+            "label": "Sequences and series (数列与级数)",
+            "children": [
+              {
+                "code": "MM2.1",
+                "label": "Sequences and recurrence (数列与递推)"
+              },
+              {
+                "code": "MM2.2",
+                "label": "Arithmetic series (等差级数)"
+              },
+              {
+                "code": "MM2.3",
+                "label": "Geometric series (等比级数)"
+              },
+              {
+                "code": "MM2.4",
+                "label": "Binomial expansion (二项式展开)"
+              }
+            ]
+          },
+          {
+            "code": "MM3",
+            "label": "Coordinate geometry in the (x, y)-plane (坐标几何)",
+            "children": [
+              {
+                "code": "MM3.1",
+                "label": "Straight lines (直线)"
+              },
+              {
+                "code": "MM3.2",
+                "label": "Circles in coordinate geometry (圆的坐标几何)"
+              },
+              {
+                "code": "MM3.3",
+                "label": "Circle properties (圆性质)"
+              }
+            ]
+          },
+          {
+            "code": "MM4",
+            "label": "Trigonometry (三角)",
+            "children": [
+              {
+                "code": "MM4.1",
+                "label": "Sine/cosine rules and triangle area (正弦/余弦定理与三角形面积)"
+              },
+              {
+                "code": "MM4.2",
+                "label": "Radian measure (弧度制)"
+              },
+              {
+                "code": "MM4.3",
+                "label": "Exact trigonometric values (三角函数精确值)"
+              },
+              {
+                "code": "MM4.4",
+                "label": "Trigonometric graphs, symmetry and periodicity (三角图像、对称与周期)"
+              },
+              {
+                "code": "MM4.5",
+                "label": "Trigonometric identities (三角恒等式)"
+              },
+              {
+                "code": "MM4.6",
+                "label": "Trigonometric equations (三角方程)"
+              }
+            ]
+          },
+          {
+            "code": "MM5",
+            "label": "Exponentials and logarithms (指数与对数)",
+            "children": [
+              {
+                "code": "MM5.1",
+                "label": "Exponential functions and graphs (指数函数与图像)"
+              },
+              {
+                "code": "MM5.2",
+                "label": "Logarithm laws (对数律)"
+              },
+              {
+                "code": "MM5.3",
+                "label": "Exponential equations (指数方程)"
+              }
+            ]
+          },
+          {
+            "code": "MM6",
+            "label": "Differentiation (微分)",
+            "children": [
+              {
+                "code": "MM6.1",
+                "label": "Derivative as gradient/rate of change (导数作为斜率/变化率)"
+              },
+              {
+                "code": "MM6.2",
+                "label": "Differentiating powers (幂函数求导)"
+              },
+              {
+                "code": "MM6.3",
+                "label": "Applications of differentiation (导数应用)"
+              }
+            ]
+          },
+          {
+            "code": "MM7",
+            "label": "Integration (积分)",
+            "children": [
+              {
+                "code": "MM7.1",
+                "label": "Definite integration and area (定积分与面积)"
+              },
+              {
+                "code": "MM7.2",
+                "label": "Integrating powers (幂函数积分)"
+              },
+              {
+                "code": "MM7.3",
+                "label": "Fundamental Theorem of Calculus (微积分基本定理)"
+              },
+              {
+                "code": "MM7.4",
+                "label": "Combining integrals (合并积分)"
+              },
+              {
+                "code": "MM7.5",
+                "label": "Trapezium rule (梯形法则)"
+              },
+              {
+                "code": "MM7.6",
+                "label": "Differential equations (微分方程)"
+              }
+            ]
+          },
+          {
+            "code": "MM8",
+            "label": "Graphs of functions (函数图像)",
+            "children": [
+              {
+                "code": "MM8.1",
+                "label": "Sketch common graphs (常见函数图像)"
+              },
+              {
+                "code": "MM8.2",
+                "label": "Graph transformations and composition (图像变换与复合函数)"
+              },
+              {
+                "code": "MM8.3",
+                "label": "Effects of m and c in y=mx+c (一次函数参数影响)"
+              },
+              {
+                "code": "MM8.4",
+                "label": "Effects of a, b, c in quadratic form (二次函数参数影响)"
+              },
+              {
+                "code": "MM8.5",
+                "label": "Use differentiation to determine graph shape (用导数判断图像形状)"
+              },
+              {
+                "code": "MM8.6",
+                "label": "Axis intersections and polynomial roots (坐标轴交点与多项式根)"
+              },
+              {
+                "code": "MM8.7",
+                "label": "Graph intersections and simultaneous equations (图像交点与联立方程)"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
