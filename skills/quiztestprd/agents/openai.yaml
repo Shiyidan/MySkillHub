@@ -1,0 +1,4 @@
+interface:
+  display_name: "QuizTestPRD"
+  short_description: "Generate behavior-first QuizTestDemo PRD documents by module."
+  default_prompt: "Organize the PRD into sections: goal and scope, page description, core flow, error handling, and non-goals."
