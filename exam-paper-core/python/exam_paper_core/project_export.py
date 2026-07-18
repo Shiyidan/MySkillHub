@@ -48,6 +48,47 @@ def _as_year(value: Any) -> int:
     raise ContractError("项目诊断卷年份必须是数字。")
 
 
+def _project_remarks(assembly: Any) -> str:
+    _require(isinstance(assembly, dict), "assembled_exam.metadata.assembly 必须是对象。")
+    sections = assembly.get("sections")
+    _require(isinstance(sections, list) and sections, "assembled_exam 必须包含非空模块段。")
+    duration = assembly.get("official_full_test_time_minutes")
+    _require(isinstance(duration, int) and not isinstance(duration, bool) and duration > 0, "assembled_exam 缺少官方整卷时长。")
+
+    confidence_labels = {"high": "高", "medium": "中", "low": "低"}
+    section_notes: list[str] = []
+    for index, section in enumerate(sections, 1):
+        _require(isinstance(section, dict), f"assembled_exam 第 {index} 个模块段必须是对象。")
+        module = section.get("module_label") or section.get("module")
+        actual = section.get("actual_question_count")
+        target = section.get("target_question_count")
+        flags = section.get("diagnostic_flags", [])
+        confidence = section.get("diagnostic_confidence")
+        _require(isinstance(module, str) and module.strip(), f"assembled_exam 第 {index} 个模块段缺少名称。")
+        _require(isinstance(actual, int) and not isinstance(actual, bool) and actual >= 0, f"{module} 实际题量无效。")
+        _require(isinstance(target, int) and not isinstance(target, bool) and target > 0, f"{module} 目标题量无效。")
+        _require(isinstance(flags, list), f"{module} diagnostic_flags 必须是数组。")
+        _require(confidence in confidence_labels, f"{module} diagnostic_confidence 无效。")
+
+        details = [f"实际 {actual}/{target} 题"]
+        if actual < target:
+            details.append(f"题量不足 {target - actual} 题")
+        elif "overfilled" in flags:
+            details.append(f"候选题超量，已筛选至 {target} 题")
+        if "narrow_coverage" in flags:
+            details.append("考纲覆盖偏窄")
+        if "source_skewed" in flags:
+            details.append("题源分布偏斜")
+        details.append(f"诊断可信度{confidence_labels[confidence]}")
+        section_notes.append(f"{module}：" + "，".join(details))
+
+    return (
+        f"管理员备注：各模块固定 40 分钟，本卷固定 {duration} 分钟。"
+        + "；".join(section_notes)
+        + "。"
+    )
+
+
 def _latex_text(value: str) -> str:
     text = value.strip()
     if not text:
@@ -242,12 +283,13 @@ def validate_project_diagnostic_paper(document: Any) -> None:
     _require(isinstance(document, dict) and set(document) == {"code", "metadata", "questions"}, "项目诊断卷根字段必须且只能包含 code、metadata、questions。")
     _require(isinstance(document["code"], str) and document["code"].strip(), "项目诊断卷 code 不能为空。")
     metadata = document["metadata"]
-    _require(isinstance(metadata, dict) and set(metadata) == {"paperName", "year", "duration", "examType", "paperType", "totalQuestions"}, "项目诊断卷 metadata 字段不完整。")
+    _require(isinstance(metadata, dict) and set(metadata) == {"paperName", "year", "duration", "examType", "paperType", "totalQuestions", "remarks"}, "项目诊断卷 metadata 字段不完整。")
     _require(isinstance(metadata["paperName"], str) and metadata["paperName"].strip(), "metadata.paperName 不能为空。")
     _require(isinstance(metadata["year"], int) and not isinstance(metadata["year"], bool), "metadata.year 必须是数字年份。")
     _require(isinstance(metadata["duration"], int) and metadata["duration"] > 0, "metadata.duration 必须是正整数分钟。")
     _require(metadata["examType"] == "ESAT", "metadata.examType 必须是 ESAT。")
     _require(metadata["paperType"] == "mockPaper", "legacy 组合诊断卷的 paperType 必须是 mockPaper。")
+    _require(isinstance(metadata["remarks"], str) and metadata["remarks"].strip(), "metadata.remarks 不能为空。")
     questions = document["questions"]
     _require(isinstance(questions, list) and questions, "questions 必须是非空数组。")
     _require(metadata["totalQuestions"] == len(questions), "metadata.totalQuestions 必须等于 questions.length。")
@@ -291,6 +333,8 @@ def build_project_diagnostic_paper(
     _require(assembled_document.get("validation_status") == "passed", "assembled_exam 尚未通过内部校验。")
     metadata = assembled_document["metadata"]
     year = _as_year(metadata["year"])
+    assembly = metadata.get("assembly")
+    remarks = _project_remarks(assembly)
     questions = [
         _project_question(
             question,
@@ -305,10 +349,11 @@ def build_project_diagnostic_paper(
         "metadata": {
             "paperName": metadata["title"],
             "year": year,
-            "duration": metadata["assembly"]["total_suggested_time_minutes"],
+            "duration": assembly["official_full_test_time_minutes"],
             "examType": "ESAT",
             "paperType": "mockPaper",
             "totalQuestions": len(questions),
+            "remarks": remarks,
         },
         "questions": questions,
     }

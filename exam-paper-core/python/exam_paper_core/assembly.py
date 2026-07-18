@@ -45,8 +45,20 @@ def _validate_modules(modules: Any, *, allow_single_module: bool = False) -> lis
     return list(modules)
 
 
-def _module_targets(constraints: dict[str, Any], modules: list[str]) -> dict[str, int]:
+def _module_targets(constraints: dict[str, Any], modules: list[str], *, paper_mode: str) -> dict[str, int]:
     counts = constraints.get("target_question_counts") or constraints.get("per_module_counts")
+    if paper_mode in {"diagnostic_combination_paper", "full_mock_like_paper"}:
+        if counts is not None:
+            _require(isinstance(counts, dict), "constraints.target_question_counts 必须是对象。")
+            invalid = {
+                module: counts.get(module)
+                for module in modules
+                if counts.get(module, DEFAULT_MODULE_QUESTION_COUNT) != DEFAULT_MODULE_QUESTION_COUNT
+            }
+            _require(not invalid, f"完整 ESAT 组合诊断卷每个模块必须固定为 27 题，不得覆盖：{invalid}")
+            extra = set(counts) - set(modules)
+            _require(not extra, f"target_question_counts 包含不在本次组合中的模块：{sorted(extra)}")
+        return {module: DEFAULT_MODULE_QUESTION_COUNT for module in modules}
     if counts is None:
         return {module: DEFAULT_MODULE_QUESTION_COUNT for module in modules}
     _require(isinstance(counts, dict), "constraints.target_question_counts 必须是对象。")
@@ -92,11 +104,9 @@ def _question_features(question: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def suggested_time_minutes(actual_question_count: int) -> int:
-    """按 ESAT 官方 27 题/40 分钟基准给 legacy 诊断模块换算建议时长。"""
+    """组合诊断卷始终保留 ESAT 官方每模块 40 分钟时长。"""
 
-    if actual_question_count <= 0:
-        return 0
-    return (actual_question_count * MODULE_TIME_MINUTES + DEFAULT_MODULE_QUESTION_COUNT - 1) // DEFAULT_MODULE_QUESTION_COUNT
+    return MODULE_TIME_MINUTES
 
 
 def _select_questions(candidates: list[dict[str, Any]], target_count: int) -> list[dict[str, Any]]:
@@ -174,7 +184,7 @@ def _module_summary(module: str, candidates: list[dict[str, Any]], selected: lis
         coverage_note = f"本模块覆盖 {len(family_codes)} 个 ESAT 考纲大类、{len(syllabus_items)} 个标准考纲点。"
     if sources:
         notes.append("题源分布：" + "，".join(f"{key} {value} 题" for key, value in sorted(sources.items())) + "。")
-    notes.append(f"官方完整模块基准为 {DEFAULT_MODULE_QUESTION_COUNT} 题/{MODULE_TIME_MINUTES} 分钟；本模块 {len(selected)} 题，建议限时 {suggested_minutes} 分钟。")
+    notes.append(f"官方完整模块基准为 {DEFAULT_MODULE_QUESTION_COUNT} 题/{MODULE_TIME_MINUTES} 分钟；本模块实际 {len(selected)} 题，仍固定限时 {suggested_minutes} 分钟。")
     notes.append("按模块单独评分，诊断结果不等同于官方完整模块换算分。")
     return {
         "module": module,
@@ -183,7 +193,7 @@ def _module_summary(module: str, candidates: list[dict[str, Any]], selected: lis
         "official_question_count": DEFAULT_MODULE_QUESTION_COUNT,
         "official_time_minutes": MODULE_TIME_MINUTES,
         "suggested_time_minutes": suggested_minutes,
-        "time_note": f"官方 ESAT 完整模块为 {DEFAULT_MODULE_QUESTION_COUNT} 题/{MODULE_TIME_MINUTES} 分钟；legacy 诊断模块按实际 {len(selected)} 题建议 {suggested_minutes} 分钟。",
+        "time_note": f"官方 ESAT 完整模块为 {DEFAULT_MODULE_QUESTION_COUNT} 题/{MODULE_TIME_MINUTES} 分钟；本 legacy 诊断模块实际 {len(selected)} 题，仍使用固定 {suggested_minutes} 分钟。",
         "target_question_count": target_count,
         "actual_question_count": len(selected),
         "available_question_count": len(candidates),
@@ -226,7 +236,7 @@ def analyze_assembly(source_document: dict[str, Any], constraints: dict[str, Any
     paper_mode = constraints.get("paper_mode", "diagnostic_combination_paper")
     _require(paper_mode in {"diagnostic_combination_paper", "diagnostic_module_paper", "full_mock_like_paper"}, "paper_mode 不受支持。")
     modules = _validate_modules(constraints.get("modules"), allow_single_module=paper_mode == "diagnostic_module_paper")
-    targets = _module_targets(constraints, modules)
+    targets = _module_targets(constraints, modules, paper_mode=paper_mode)
     buckets = _candidate_buckets(source_document)
     selected_by_module: dict[str, list[dict[str, Any]]] = {}
     module_reports: dict[str, Any] = {}
@@ -253,7 +263,7 @@ def analyze_assembly(source_document: dict[str, Any], constraints: dict[str, Any
     paper_notes = [
         f"本卷由 {source_document_name} 按 ESAT 当前考纲重组，用于诊断性测试。",
         "题干、LaTeX、SVG/图形资产、中文解析、来源证据均继承自已校验解析结果。",
-        "每个模块按实际入卷题数给出建议限时，分数按模块分别解释；若某模块题量不足或覆盖偏窄，诊断可信度会在模块说明中标出。",
+        f"每个模块固定限时 {MODULE_TIME_MINUTES} 分钟，整卷固定限时 {len(modules) * MODULE_TIME_MINUTES} 分钟；分数按模块分别解释，题量不足、覆盖偏窄和诊断可信度会在模块说明中标出。",
     ]
     if paper_mode == "full_mock_like_paper" and any(report["actual_question_count"] < report["target_question_count"] for report in module_reports.values()):
         paper_notes.append("本卷未达到完整官方模拟题量，因此作为 legacy diagnostic paper 使用。")

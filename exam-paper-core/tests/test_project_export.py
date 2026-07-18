@@ -30,7 +30,33 @@ class ProjectExportTest(unittest.TestCase):
                 "metadata": {
                     "year": 2023,
                     "title": "ESAT legacy diagnostic paper: Mathematics 1 + Biology + Physics",
-                    "assembly": {"total_suggested_time_minutes": 72},
+                    "assembly": {
+                        "official_full_test_time_minutes": 120,
+                        "total_suggested_time_minutes": 120,
+                        "sections": [
+                            {
+                                "module": "Mathematics 1",
+                                "actual_question_count": 0,
+                                "target_question_count": 27,
+                                "diagnostic_flags": ["underfilled"],
+                                "diagnostic_confidence": "low",
+                            },
+                            {
+                                "module": "Biology",
+                                "actual_question_count": 0,
+                                "target_question_count": 27,
+                                "diagnostic_flags": ["underfilled"],
+                                "diagnostic_confidence": "low",
+                            },
+                            {
+                                "module": "Physics",
+                                "actual_question_count": 1,
+                                "target_question_count": 27,
+                                "diagnostic_flags": ["underfilled", "narrow_coverage"],
+                                "diagnostic_confidence": "low",
+                            },
+                        ],
+                    },
                 },
                 "questions": [
                     {
@@ -92,7 +118,12 @@ class ProjectExportTest(unittest.TestCase):
             )
 
         self.assertEqual(result["metadata"]["paperType"], "mockPaper")
+        self.assertEqual(result["metadata"]["duration"], 120)
         self.assertEqual(result["metadata"]["totalQuestions"], 1)
+        self.assertIn("Physics：实际 1/27 题", result["metadata"]["remarks"])
+        self.assertIn("题量不足 26 题", result["metadata"]["remarks"])
+        self.assertIn("考纲覆盖偏窄", result["metadata"]["remarks"])
+        self.assertIn("诊断可信度低", result["metadata"]["remarks"])
         question = result["questions"][0]
         self.assertEqual(question["number"], 1)
         self.assertEqual(question["answer"], ["B"])

@@ -11,14 +11,15 @@
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["paperName", "year", "duration", "examType", "paperType", "totalQuestions"],
+      "required": ["paperName", "year", "duration", "examType", "paperType", "totalQuestions", "remarks"],
       "properties": {
         "paperName": {"type": "string", "minLength": 1},
         "year": {"type": "integer"},
         "duration": {"type": "integer", "minimum": 1},
         "examType": {"const": "ESAT"},
         "paperType": {"const": "mockPaper"},
-        "totalQuestions": {"type": "integer", "minimum": 1}
+        "totalQuestions": {"type": "integer", "minimum": 1},
+        "remarks": {"type": "string", "minLength": 1}
       }
     },
     "questions": {

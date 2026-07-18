@@ -123,13 +123,7 @@ def _require(condition: bool, message: str) -> None:
 
 
 def _suggested_time_minutes(actual_question_count: int) -> int:
-    if actual_question_count <= 0:
-        return 0
-    return (
-        actual_question_count * ESAT_OFFICIAL_MODULE_TIME_MINUTES
-        + ESAT_OFFICIAL_MODULE_QUESTION_COUNT
-        - 1
-    ) // ESAT_OFFICIAL_MODULE_QUESTION_COUNT
+    return ESAT_OFFICIAL_MODULE_TIME_MINUTES
 
 
 def _nonempty_text(value: Any, message: str, minimum: int = 1) -> str:
@@ -675,8 +669,8 @@ def _validate_assembly_metadata(metadata: dict[str, Any], document_type: str) ->
     _require(
         isinstance(assembly["total_suggested_time_minutes"], int)
         and not isinstance(assembly["total_suggested_time_minutes"], bool)
-        and assembly["total_suggested_time_minutes"] >= 0,
-        "metadata.assembly.total_suggested_time_minutes 必须是非负整数。",
+        and assembly["total_suggested_time_minutes"] > 0,
+        "metadata.assembly.total_suggested_time_minutes 必须是正整数。",
     )
     scoring = _exact_fields(
         assembly["scoring"],
@@ -744,10 +738,10 @@ def _validate_assembly_metadata(metadata: dict[str, Any], document_type: str) ->
         seen_orders.add(order)
         _require(section_data["official_question_count"] == ESAT_OFFICIAL_MODULE_QUESTION_COUNT, f"metadata.assembly.sections[{offset}].official_question_count 必须为 27。")
         _require(section_data["official_time_minutes"] == ESAT_OFFICIAL_MODULE_TIME_MINUTES, f"metadata.assembly.sections[{offset}].official_time_minutes 必须为 40。")
-        for field in ("target_question_count", "actual_question_count"):
-            _require(isinstance(section_data[field], int) and not isinstance(section_data[field], bool) and section_data[field] >= 0, f"metadata.assembly.sections[{offset}].{field} 必须是非负整数。")
+        _require(isinstance(section_data["target_question_count"], int) and not isinstance(section_data["target_question_count"], bool) and section_data["target_question_count"] > 0, f"metadata.assembly.sections[{offset}].target_question_count 必须是正整数。")
+        _require(isinstance(section_data["actual_question_count"], int) and not isinstance(section_data["actual_question_count"], bool) and section_data["actual_question_count"] >= 0, f"metadata.assembly.sections[{offset}].actual_question_count 必须是非负整数。")
         expected_suggested = _suggested_time_minutes(section_data["actual_question_count"])
-        _require(section_data["suggested_time_minutes"] == expected_suggested, f"metadata.assembly.sections[{offset}].suggested_time_minutes 必须按实际题数由 27题/40分钟折算。")
+        _require(section_data["suggested_time_minutes"] == expected_suggested, f"metadata.assembly.sections[{offset}].suggested_time_minutes 必须固定为 40 分钟。")
         total_suggested += section_data["suggested_time_minutes"]
         _require(section_data["scoring_group"] == module, f"metadata.assembly.sections[{offset}].scoring_group 必须与模块一致。")
         _require(section_data["diagnostic_status"] in ASSEMBLY_DIAGNOSTIC_STATUSES, f"metadata.assembly.sections[{offset}].diagnostic_status 不受支持。")

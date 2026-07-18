@@ -77,7 +77,7 @@
               }
             },
             "official_full_test_time_minutes": {"type": "integer", "minimum": 40},
-            "total_suggested_time_minutes": {"type": "integer", "minimum": 0},
+            "total_suggested_time_minutes": {"type": "integer", "minimum": 40},
             "sections": {
               "type": "array",
               "minItems": 1,
@@ -110,8 +110,8 @@
                   "section_order": {"type": "integer", "minimum": 1},
                   "official_question_count": {"const": 27},
                   "official_time_minutes": {"const": 40},
-                  "suggested_time_minutes": {"type": "integer", "minimum": 0},
-                  "target_question_count": {"type": "integer", "minimum": 0},
+                  "suggested_time_minutes": {"const": 40},
+                  "target_question_count": {"type": "integer", "minimum": 1},
                   "actual_question_count": {"type": "integer", "minimum": 0},
                   "scoring_group": {"enum": ["Mathematics 1", "Biology", "Chemistry", "Physics", "Mathematics 2"]},
                   "diagnostic_status": {"enum": ["sufficient", "underfilled", "overfilled", "narrow_coverage", "source_skewed", "mixed"]},

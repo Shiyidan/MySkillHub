@@ -8,10 +8,11 @@
   "metadata": {
     "paperName": "ESAT legacy diagnostic paper: Mathematics 1 + Physics + Mathematics 2",
     "year": 2023,
-    "duration": 2,
+    "duration": 120,
     "examType": "ESAT",
     "paperType": "mockPaper",
-    "totalQuestions": 1
+    "totalQuestions": 1,
+    "remarks": "管理员备注：各模块固定 40 分钟，本卷固定 120 分钟。Mathematics 1：实际 0/27 题，题量不足 27 题，诊断可信度低；Physics：实际 1/27 题，题量不足 26 题，考纲覆盖偏窄，诊断可信度低；Mathematics 2：实际 0/27 题，题量不足 27 题，诊断可信度低。"
   },
   "questions": [
     {
@@ -66,7 +67,9 @@
 
 - 六个文件分别导入，项目会创建六张独立 `Paper`。
 - `paperType` 使用 `mockPaper`：题目来自真题，但组合卷不是官方原始试卷。
+- 完整组合卷的 `duration` 固定为 120；不足 27 题的模块也保持 40 分钟。
+- `metadata.remarks` 必须逐模块提示实际/目标题量、覆盖偏窄和诊断可信度；上面的 JSON 为单题缩略示例，正式输出通常包含更多题目。
 - 同一道来源题在多套卷中保持相同 `code`；项目当前仍会按 `paperId + number` 创建独立 Question 记录。
 - Mathematics 1 题目排在最前，随后按组合中的两个进一步模块依次排列。
 - SVG 必须内联；位图必须转换为 data URI，保证单个 JSON 自包含。
-- 内部组卷分析、来源证据和质量凭据不写入项目 JSON。
+- 内部组卷分析、来源证据和质量凭据不写入项目 JSON，只把管理员需要看到的完整性警告汇总到 `metadata.remarks`。

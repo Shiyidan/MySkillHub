@@ -24,11 +24,11 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 ## 3. 模块分段与评分
 
 - 每套卷包含 3 个模块段。
-- ESAT 官方完整模块基准为 27 题/40 分钟；legacy 诊断卷不得机械写死每段 40 分钟。
+- ESAT 官方完整模块基准为 27 题/40 分钟；完整组合诊断卷必须把每个模块目标题量锁定为 27，调用方不得覆盖。
 - 每段必须写入 `official_question_count=27`、`official_time_minutes=40`、`actual_question_count`、`suggested_time_minutes` 和 `time_note`。
 - 每段必须写入来自 `esat_syllabus.json` 的 `module_code`、`module_label`、`coverage_summary` 和 `syllabus_coverage`。
-- 建议限时按 `ceil(actual_question_count × 40 / 27)` 计算；若某模块 0 题，则建议限时为 0 分钟。
-- 整卷必须写入 `official_full_test_time_minutes` 和 `total_suggested_time_minutes`，方便系统开发设置三段测试计时器。
+- 无论实际题量是否不足 27，`suggested_time_minutes` 和 `official_time_minutes` 均为 40；完整三模块组合卷总时长固定为 120 分钟。
+- 整卷必须写入 `official_full_test_time_minutes=120` 和 `total_suggested_time_minutes=120`，方便系统开发设置三段测试计时器。
 - 每题 1 原始分，不倒扣。
 - 学生测试和结果解释必须按模块分别进行。
 - ESAT 官方结果按模块分别报告 1.0-9.0、一位小数的等级分；换算依赖当次考试 Rasch 等值和考生分布。legacy 诊断卷只能报告模块原始分和正确率，不能伪造官方等级分。
@@ -63,9 +63,10 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 
 - 全部纳入可用题。
 - 在 `module_note` 中写明目标题量、实际题量和诊断限制。
-- 在 `time_note` 中写明官方 27题/40分钟基准和实际题量对应的建议限时。
+- 在 `time_note` 中写明官方 27 题/40 分钟基准、实际题量以及仍固定使用 40 分钟。
 - 在 `syllabus_coverage` 中保留空覆盖结构，不能省略字段。
 - `diagnostic_confidence` 根据缺口程度降为 `medium` 或 `low`。
+- 在最终项目 JSON 的 `metadata.remarks` 中写明题量缺口、覆盖偏窄和中文可信度提示，供管理员导入前核对。
 - 学生报告应说明：该模块结果只能诊断已覆盖范围，不能等价于完整官方模块。
 
 ## 6. 题目过多时的挑选
@@ -94,7 +95,7 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 最终交付必须是六个独立的项目 JSON。每个文件必须包含：
 
 - 根字段 `code`、`metadata`、`questions`。
-- `metadata.paperName/year/duration/examType/paperType/totalQuestions`。
+- `metadata.paperName/year/duration/examType/paperType/totalQuestions/remarks`。
 - 三个模块的全部入选题目，按模块顺序排列并从 1 连续编号。
 - 字符串 `title`，且等于首个 `content_blocks` paragraph。
 - 数组 `answer`，项目题型枚举和当前考纲字段。
@@ -109,6 +110,6 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 - canonical 知识点和考纲项转换为项目 `knowledge_points/syllabus_points`。
 - canonical `correct_solution` 转换为项目 `learning_analysis.solution`。
 
-内部 coverage、module_note、diagnostic_confidence、来源 evidence 和 fingerprint 不进入项目 JSON；它们仍保留在 canonical 或分析产物中。
+内部 coverage、module_note、来源 evidence 和 fingerprint 不进入项目 JSON；它们仍保留在 canonical 或分析产物中。最终 `metadata.remarks` 只汇总每模块实际/目标题量、覆盖警告和 `diagnostic_confidence`，不复制整套内部分析结构。
 
 最终字段模板见 `references/output-template.md`，正式 Schema 为 `../exam-paper-core/schema/project-diagnostic-paper.schema.json`。
