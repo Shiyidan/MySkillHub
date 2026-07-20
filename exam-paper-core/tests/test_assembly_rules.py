@@ -10,11 +10,13 @@ if str(CORE_PYTHON) not in sys.path:
     sys.path.insert(0, str(CORE_PYTHON))
 
 from exam_paper_core.assembly import (  # noqa: E402
+    ESAT_COMBINATIONS,
+    _deduplicate_candidates,
     _module_targets,
     _select_questions,
     suggested_time_minutes,
 )
-from exam_paper_core.contract import ContractError, _suggested_time_minutes  # noqa: E402
+from exam_paper_core.contract import ContractError, DIFFICULTIES, _suggested_time_minutes  # noqa: E402
 
 
 class AssemblyRulesTest(unittest.TestCase):
@@ -66,6 +68,51 @@ class AssemblyRulesTest(unittest.TestCase):
 
         self.assertEqual(len(selected), 27)
         self.assertEqual(len({item["code"] for item in selected}), 27)
+
+    def test_exact_and_equivalent_content_duplicates_are_removed(self) -> None:
+        base = {
+            "code": "Q01",
+            "fingerprint": "a" * 64,
+            "title": [{"type": "text", "content": "What is x?"}],
+            "options": [],
+            "diagram": None,
+            "questionNumber": 1,
+            "difficulty": "easy",
+            "source_examType": "ENGAA",
+            "target_exam_scope": {"syllabus_codes": ["110415"]},
+        }
+        exact_duplicate = dict(base, code="Q02", questionNumber=2)
+        same_stem = dict(base, code="Q03", fingerprint="b" * 64, questionNumber=3)
+        different = dict(
+            base,
+            code="Q04",
+            fingerprint="c" * 64,
+            questionNumber=4,
+            title=[{"type": "text", "content": "What is y?"}],
+        )
+
+        unique, duplicates = _deduplicate_candidates(
+            [base, exact_duplicate, same_stem, different]
+        )
+
+        self.assertEqual([item["code"] for item in unique], ["Q01", "Q04"])
+        self.assertEqual(
+            [(item["excluded_code"], item["reason"]) for item in duplicates],
+            [("Q02", "exact_fingerprint"), ("Q03", "equivalent_content")],
+        )
+        self.assertEqual(
+            [item["code"] for item in _select_questions([base, exact_duplicate, same_stem, different], 27)],
+            ["Q01", "Q04"],
+        )
+
+    def test_esat_year_has_six_unique_three_module_combinations(self) -> None:
+        self.assertEqual(len(ESAT_COMBINATIONS), 6)
+        self.assertEqual(len(set(ESAT_COMBINATIONS)), 6)
+        self.assertTrue(all(len(item) == 3 for item in ESAT_COMBINATIONS))
+        self.assertTrue(all(item[0] == "Mathematics 1" for item in ESAT_COMBINATIONS))
+
+    def test_project_difficulty_vocabulary_includes_composite(self) -> None:
+        self.assertEqual(DIFFICULTIES, {"easy", "medium", "hard", "composite"})
 
 
 if __name__ == "__main__":

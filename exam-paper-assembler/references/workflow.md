@@ -1,11 +1,11 @@
 # ESAT Legacy 诊断组卷流程
 
-组卷只消费已经完成解析、中文解析、图形还原和 ESAT 范围标注的 canonical 年度 JSON。它不修改单题质量字段。内部先构建并校验 `assembled_exam`，然后确定性投影为六个可直接导入项目的完整试卷 JSON。
+组卷只消费已经完成解析、中文解析、图形还原和 ESAT 范围标注的 canonical 年度 JSON。它不修改单题质量字段。内部先构建并校验 `assembled_exam`，然后确定性投影为六个新版模块分组项目 JSON。
 
 ## 1. ESAT-only
 
 - 仅适用于 ESAT legacy 场景。
-- 输入必须来自同一年 ENGAA+NSAA 合并题库，`metadata.source_exam_types` 同时包含两种来源。
+- 输入必须来自同一年 ENGAA+NSAA 合并真题库，`metadata.paper_type=realPaper`，且 `metadata.source_exam_types` 同时包含两种来源。
 - TMUA、STEP 或普通生成题不得使用本流程。
 
 ## 2. 年度 6 套组合
@@ -20,6 +20,14 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 6. Mathematics 1 + Physics + Mathematics 2
 
 使用 `assemble-year` 时必须一次生成全部 6 套。
+
+### 批量发布规则
+
+- 六套组合先写入隔离暂存目录，全部通过 canonical、项目 Schema 和整包一致性校验后再发布。
+- 整包校验必须确认文件名与六种标准组合完全一致、每套模块及顺序正确、每段固定 40 分钟、每套固定 120 分钟、单卷无重复题，并确认同一模块在不同组合卷中的题目与顺序一致。
+- 最终目录采用目录级事务替换；任一发布步骤失败时恢复完整旧目录，不允许出现新旧文件混合。
+- 成功发布时以本次六套卷完整替换旧目录，自动清除旧版本遗留文件。
+- 通用 `title` 会自动追加模块组合；需要自定义格式时使用含 `{year}`、`{modules}` 占位符的 `title_template`。
 
 ## 3. 模块分段与评分
 
@@ -39,10 +47,10 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 题目进入候选池必须满足：
 
 - `target_exam_scope.target_exam == "ESAT"`。
-- `target_exam_scope.status == "in_scope"`。
-- `target_exam_scope.review_status == "reviewed"`。
-- `target_exam_scope.primary_module` 属于当前组合。
-- `target_exam_scope.primary_module_code`、`primary_module_label` 与 `esat_syllabus.json` 模块节点一致。
+- `target_exam_scope.scope_status == "in_scope"`。
+- `target_exam_scope.mapping_status` 为 `auto_verified` 或 `human_verified`。
+- `subject` 属于当前组合，`target_exam_scope.modules == [subject]`。
+- `subject_code` 与 `esat_syllabus.json` 中该科目的模块 code 一致。
 - `target_exam_scope.syllabus_codes` 全部是 `esat_syllabus.json` 中存在的 6 位数字代码。
 - `target_exam_scope.syllabus_items` 与 `syllabus_codes` 逐项对应，且 code、label、module、parent、path 与 `esat_syllabus.json` 完全一致。
 - `question_type == "multiple_choice"`。
@@ -53,7 +61,7 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 - `out_of_scope`
 - `partially_in_scope`
 - `unknown`
-- 未复核题
+- `mapping_status == "needs_review"` 的题目
 - 非选择题
 - AI 生成题
 
@@ -71,12 +79,12 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 
 ## 6. 题目过多时的挑选
 
-题量超过目标时，不得简单取前 N 题。按以下优先级稳定挑选：
+题量超过目标时，不得简单取前 N 题。先比较规范化题干、选项内容、正确答案和考纲归属：四者一致的确认重复题只保留一题，并把保留 code、排除 code、原因及来源写入内部 `module_reports[].deduplicated_questions`；选项顺序不同但正确答案所对应内容一致时也可合并。仅题干相同、视觉证据不足或高度相似的题不得自动删除；答案或考纲归属冲突必须回到 parser 复核。随后按以下优先级稳定挑选：
 
-1. 覆盖更多 ESAT 考纲大类。
-2. 难度分布更均衡。
-3. ENGAA/NSAA 题源更平衡。
-4. 避免同知识点重复堆叠。
+1. 覆盖更多具体 ESAT 考点，避免同知识点重复堆叠。
+2. 覆盖更多 ESAT 考纲大类。
+3. 难度分布更均衡。
+4. ENGAA/NSAA 题源更平衡。
 5. 优先保留已完整解析、图形还原和来源证据完整的题。
 6. 仍无法区分时按年份、来源、原题号和 code 稳定排序。
 
@@ -96,11 +104,13 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 
 - 根字段 `code`、`metadata`、`questions`。
 - `metadata.paperName/year/duration/examType/paperType/totalQuestions/remarks`。
-- 三个模块的全部入选题目，按模块顺序排列并从 1 连续编号。
+- `metadata.paperType=realPaper`。
+- `questions[0..2]` 是三个模块对象，每个模块只包含 `subject`、`subject_code`、`duration`、`items`。
+- 三个模块按组合顺序排列，每个模块的 `items[].number` 独立从 1 连续编号。
 - 字符串 `title`，且等于首个 `content_blocks` paragraph。
 - 数组 `answer`，项目题型枚举和当前考纲字段。
 - 自包含 SVG 或 data URI 位图，不引用本机文件路径。
-- 相同来源题在不同卷中使用相同 `code`。
+- 相同来源题在不同卷中使用相同 `questions[].items[].code`。
 
 项目导出时进行以下确定性转换：
 
@@ -109,7 +119,10 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 - canonical `multiple_choice/free_response` 转换为项目 `single_choice/multiple_choice/short_answer`。
 - canonical 知识点和考纲项转换为项目 `knowledge_points/syllabus_points`。
 - canonical `correct_solution` 转换为项目 `learning_analysis.solution`。
+- canonical 单题 `subject/subject_code` 上移到模块对象，最终单题不再重复输出。
+- canonical 单题 `is_ai_generated` 不进入最终项目 JSON，试卷来源统一由 `metadata.paperType` 表达。
 
 内部 coverage、module_note、来源 evidence 和 fingerprint 不进入项目 JSON；它们仍保留在 canonical 或分析产物中。最终 `metadata.remarks` 只汇总每模块实际/目标题量、覆盖警告和 `diagnostic_confidence`，不复制整套内部分析结构。
 
 最终字段模板见 `references/output-template.md`，正式 Schema 为 `../exam-paper-core/schema/project-diagnostic-paper.schema.json`。
+当前 QuizTestDemo 导入器仍使用旧的扁平 `questions` 契约；项目端完成模块分组适配后才能直接导入新版 JSON。

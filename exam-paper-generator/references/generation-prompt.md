@@ -25,7 +25,7 @@
 ## TMUA 生成要求
 
 1. 生成 TMUA 时先读取 `references/tmua-generation-constraints.md` 与 `../exam-paper-core/syllabus/tmua_syllabus.json`。
-2. 每题必须明确 Paper 1 或 Paper 2，并写入 `target_exam_scope.modules`、`primary_module`、`primary_module_code`、`primary_module_label`。
+2. 每题必须明确 Paper 1 或 Paper 2，并作为唯一值写入 `target_exam_scope.modules`。
 3. `syllabus_codes`、`syllabus_items`、`knowledge_points[].code`、`topic_code` 与 `syllabus_tags` 必须来自 `tmua_syllabus.json`。
 4. Paper 1 题目聚焦数学知识在新情境中的应用，不使用 `Logic & Proof`；Paper 2 题目聚焦数学论证、逻辑判断、反例、充要条件或证明结构。
 5. TMUA 新题必须为选择题；干扰项应体现 TMUA 风格的推理误区，而不是简单算错。

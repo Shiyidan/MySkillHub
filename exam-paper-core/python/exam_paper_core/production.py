@@ -12,7 +12,7 @@ from typing import Any, Iterable
 from .contract import validate_question_fragment
 
 
-TRANSACTION_VERSION = "4"
+TRANSACTION_VERSION = "5"
 
 
 @dataclass(frozen=True)
@@ -199,6 +199,7 @@ class QuestionTransaction:
                 "records": [],
                 "status": "进行中",
                 "final_artifact": None,
+                "rollback_history": [],
             }
             _write_json_atomic(transaction_path, data)
 
@@ -223,8 +224,34 @@ class QuestionTransaction:
 
     def validate(self) -> None:
         if self.data.get("transaction_version") != TRANSACTION_VERSION:
-            raise ValueError("逐题事务版本必须为 3。")
+            raise ValueError("逐题事务版本必须为 5。")
         mode = self.data.get("mode")
+        if mode not in {"parser", "generator"}:
+            raise ValueError("逐题事务 mode 必须是 parser 或 generator。")
+        question_id = self.data.get("question_id")
+        if not isinstance(question_id, str) or not question_id.strip():
+            raise ValueError("逐题事务 question_id 不能为空。")
+        source_fingerprint = self.data.get("source_fingerprint")
+        if (
+            not isinstance(source_fingerprint, str)
+            or len(source_fingerprint) != 64
+            or any(character not in "0123456789abcdef" for character in source_fingerprint)
+        ):
+            raise ValueError("逐题事务 source_fingerprint 必须是 SHA-256。")
+        rollback_history = self.data.get("rollback_history")
+        if not isinstance(rollback_history, list):
+            raise ValueError("逐题事务 rollback_history 必须是数组。")
+        for index, rollback in enumerate(rollback_history):
+            if not isinstance(rollback, dict) or set(rollback) != {
+                "from_step", "reason", "removed_steps", "removed_final_artifact"
+            }:
+                raise ValueError(f"逐题事务 rollback_history[{index}] 结构非法。")
+            if rollback["from_step"] not in _required_steps(mode):
+                raise ValueError(f"逐题事务 rollback_history[{index}].from_step 非法。")
+            if not isinstance(rollback["reason"], str) or len(rollback["reason"].strip()) < 10:
+                raise ValueError(f"逐题事务 rollback_history[{index}].reason 内容不足。")
+            if not isinstance(rollback["removed_steps"], list):
+                raise ValueError(f"逐题事务 rollback_history[{index}].removed_steps 必须是数组。")
         required = self.data.get("required_steps")
         if required != list(_required_steps(mode)):
             raise ValueError("逐题事务步骤表被篡改。")
@@ -352,6 +379,32 @@ class QuestionTransaction:
             self.data["final_artifact"] = artifact
             self.data["status"] = "已提交"
 
+        _write_json_atomic(self.path, self.data)
+        self.validate()
+
+    def rollback_to(self, step: str, *, reason: str) -> None:
+        """Invalidate one completed step and everything after it, keeping an audit record."""
+
+        self.validate()
+        if step not in self.completed_steps:
+            raise ValueError(f"只能回退到已经完成的步骤：{step}")
+        if not isinstance(reason, str) or len(reason.strip()) < 10:
+            raise ValueError("回退原因至少需要 10 个字符。")
+        index = self.completed_steps.index(step)
+        removed_steps = self.completed_steps[index:]
+        removed_artifact = self.data.get("final_artifact")
+        self.data["completed_steps"] = self.completed_steps[:index]
+        self.data["records"] = self.data["records"][:index]
+        self.data["status"] = "进行中"
+        self.data["final_artifact"] = None
+        self.data["rollback_history"].append(
+            {
+                "from_step": step,
+                "reason": reason.strip(),
+                "removed_steps": removed_steps,
+                "removed_final_artifact": removed_artifact,
+            }
+        )
         _write_json_atomic(self.path, self.data)
         self.validate()
 

@@ -1,4 +1,4 @@
-"""将内部 assembled_exam 导出为项目可直接导入的自包含诊断试卷。"""
+"""将内部 assembled_exam 导出为按模块分组的自包含项目诊断试卷。"""
 
 from __future__ import annotations
 
@@ -22,17 +22,17 @@ PROJECT_QUESTION_FIELDS = {
     "examType",
     "source_examType",
     "year",
-    "subject",
-    "subject_code",
     "topic",
     "topic_code",
     "question_type",
     "difficulty",
     "syllabus_points",
     "knowledge_points",
-    "is_ai_generated",
     "learning_analysis",
 }
+PROJECT_MODULE_FIELDS = {"subject", "subject_code", "duration", "items"}
+PROJECT_PAPER_TYPES = {"realPaper", "mockPaper", "aiPaper"}
+PROJECT_DIFFICULTIES = {"easy", "medium", "hard", "composite"}
 
 
 def _require(condition: bool, message: str) -> None:
@@ -258,15 +258,12 @@ def _project_question(
         "examType": "ESAT",
         "source_examType": question["source_examType"],
         "year": year,
-        "subject": question["subject"],
-        "subject_code": question["subject_code"],
         "topic": question["topic"],
         "topic_code": question["topic_code"],
         "question_type": question_type,
         "difficulty": question["difficulty"],
         "syllabus_points": syllabus_points,
         "knowledge_points": knowledge_points,
-        "is_ai_generated": False,
         "learning_analysis": {
             "exam_focus": analysis["exam_focus"],
             "solution": analysis["correct_solution"],
@@ -277,8 +274,74 @@ def _project_question(
     return result
 
 
+def _project_module_groups(
+    assembled_document: dict[str, Any],
+    *,
+    year: int,
+    asset_base_dir: Path,
+) -> list[dict[str, Any]]:
+    assembly = assembled_document["metadata"].get("assembly")
+    _require(isinstance(assembly, dict), "assembled_exam.metadata.assembly 必须是对象。")
+    sections = assembly.get("sections")
+    _require(isinstance(sections, list) and sections, "assembled_exam 必须包含非空模块段。")
+
+    by_module: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    for question in assembled_document["questions"]:
+        assembled_section = question.get("assembled_section")
+        _require(isinstance(assembled_section, dict), f"{question.get('code')} 缺少 assembled_section。")
+        module = assembled_section.get("module")
+        question_order = assembled_section.get("question_order")
+        _require(isinstance(module, str) and module.strip(), f"{question.get('code')} 缺少组卷模块。")
+        _require(isinstance(question_order, int) and not isinstance(question_order, bool) and question_order > 0, f"{question.get('code')} 模块内题号无效。")
+        by_module.setdefault(module, []).append((question_order, question))
+
+    ordered_sections: list[tuple[int, dict[str, Any]]] = []
+    section_modules: set[str] = set()
+    for section in sections:
+        _require(isinstance(section, dict), "assembled_exam 模块段必须是对象。")
+        module = section.get("module")
+        section_order = section.get("section_order")
+        _require(isinstance(module, str) and module.strip(), "assembled_exam 模块段缺少 module。")
+        _require(module not in section_modules, f"assembled_exam 模块段重复：{module}")
+        _require(isinstance(section_order, int) and not isinstance(section_order, bool) and section_order > 0, f"{module} section_order 无效。")
+        section_modules.add(module)
+        ordered_sections.append((section_order, section))
+    _require(set(by_module) <= section_modules, f"存在未声明模块的题目：{sorted(set(by_module) - section_modules)}")
+
+    groups: list[dict[str, Any]] = []
+    for _, section in sorted(ordered_sections, key=lambda item: item[0]):
+        module = section["module"]
+        module_code = section.get("module_code")
+        duration = section.get("official_time_minutes")
+        _require(isinstance(module_code, str) and module_code.strip(), f"{module} 缺少 module_code。")
+        _require(isinstance(duration, int) and not isinstance(duration, bool) and duration > 0, f"{module} 模块时长无效。")
+        source_items = sorted(by_module.get(module, []), key=lambda item: item[0])
+        orders = [item[0] for item in source_items]
+        _require(orders == list(range(1, len(source_items) + 1)), f"{module} 模块内题号必须从 1 连续编号。")
+        items = [
+            _project_question(
+                question,
+                number=index,
+                year=year,
+                asset_base_dir=asset_base_dir,
+            )
+            for index, (_, question) in enumerate(source_items, 1)
+        ]
+        group = {
+            "subject": module,
+            "subject_code": module_code,
+            "duration": duration,
+            "items": items,
+        }
+        _require(set(group) == PROJECT_MODULE_FIELDS, f"{module} 模块导出字段集合异常。")
+        groups.append(group)
+
+    _require(sum(len(group["items"]) for group in groups) == len(assembled_document["questions"]), "模块分组后的题目总数不一致。")
+    return groups
+
+
 def validate_project_diagnostic_paper(document: Any) -> None:
-    """按 QuizTestDemo 当前 `/api/papers/import-json` 契约校验导出结果。"""
+    """校验采用模块分组结构的项目诊断卷 JSON。"""
 
     _require(isinstance(document, dict) and set(document) == {"code", "metadata", "questions"}, "项目诊断卷根字段必须且只能包含 code、metadata、questions。")
     _require(isinstance(document["code"], str) and document["code"].strip(), "项目诊断卷 code 不能为空。")
@@ -288,37 +351,63 @@ def validate_project_diagnostic_paper(document: Any) -> None:
     _require(isinstance(metadata["year"], int) and not isinstance(metadata["year"], bool), "metadata.year 必须是数字年份。")
     _require(isinstance(metadata["duration"], int) and metadata["duration"] > 0, "metadata.duration 必须是正整数分钟。")
     _require(metadata["examType"] == "ESAT", "metadata.examType 必须是 ESAT。")
-    _require(metadata["paperType"] == "mockPaper", "legacy 组合诊断卷的 paperType 必须是 mockPaper。")
+    _require(metadata["paperType"] in PROJECT_PAPER_TYPES, "metadata.paperType 必须是 realPaper、mockPaper 或 aiPaper。")
+    _require(metadata["paperType"] == "realPaper", "由真实 ENGAA/NSAA 题目组成的 ESAT 诊断卷必须是 realPaper。")
+    _require(isinstance(metadata["totalQuestions"], int) and not isinstance(metadata["totalQuestions"], bool) and metadata["totalQuestions"] > 0, "metadata.totalQuestions 必须是正整数。")
     _require(isinstance(metadata["remarks"], str) and metadata["remarks"].strip(), "metadata.remarks 不能为空。")
-    questions = document["questions"]
-    _require(isinstance(questions, list) and questions, "questions 必须是非空数组。")
-    _require(metadata["totalQuestions"] == len(questions), "metadata.totalQuestions 必须等于 questions.length。")
+    groups = document["questions"]
+    _require(isinstance(groups, list) and groups, "questions 必须是非空模块数组。")
 
     codes: set[str] = set()
-    for index, question in enumerate(questions, 1):
-        label = f"第 {index} 题"
-        _require(isinstance(question, dict) and set(question) == PROJECT_QUESTION_FIELDS, f"{label}字段集合不符合项目契约。")
-        _require(question["number"] == index, f"{label}.number 必须按整卷顺序连续编号。")
-        _require(question["code"] not in codes, f"{label}.code 在同一试卷中重复。")
-        codes.add(question["code"])
-        _require(question["examType"] == "ESAT", f"{label}.examType 必须是 ESAT。")
-        _require(question["source_examType"] in {"ENGAA", "NSAA"}, f"{label}.source_examType 必须是 ENGAA 或 NSAA。")
-        _require(question["year"] == metadata["year"], f"{label}.year 与试卷年份不一致。")
-        _require(question["question_type"] in {"single_choice", "multiple_choice", "short_answer"}, f"{label}.question_type 不受支持。")
-        _require(isinstance(question["answer"], list) and question["answer"], f"{label}.answer 必须是非空数组。")
-        _require(isinstance(question["content_blocks"], list) and question["content_blocks"], f"{label}.content_blocks 不能为空。")
-        first = question["content_blocks"][0]
-        _require(first == {"type": "paragraph", "text": question["title"]}, f"{label}.title 必须等于首个 paragraph。")
-        image_ids = {item["id"] for item in question["images"]}
-        referenced_ids = {
-            block["image_id"]
-            for block in question["content_blocks"]
-            if block["type"] == "image_ref"
-        }
-        referenced_ids.update(option["image_id"] for option in question["options"] if "image_id" in option)
-        _require(referenced_ids <= image_ids, f"{label}存在未定义的图片引用。")
-        _require(all(item.get("type") in {"svg", "image"} and item.get("id") and item.get("alt") for item in question["images"]), f"{label}.images 结构无效。")
-        _require(all((item["type"] == "svg" and isinstance(item.get("svg"), str)) or (item["type"] == "image" and isinstance(item.get("src"), str)) for item in question["images"]), f"{label}.images 缺少自包含资源。")
+    subjects: set[str] = set()
+    subject_codes: set[str] = set()
+    total_questions = 0
+    total_duration = 0
+    for group_index, group in enumerate(groups, 1):
+        module_label = f"questions[{group_index - 1}]"
+        _require(isinstance(group, dict) and set(group) == PROJECT_MODULE_FIELDS, f"{module_label} 必须且只能包含 subject、subject_code、duration、items。")
+        subject = group["subject"]
+        subject_code = group["subject_code"]
+        _require(isinstance(subject, str) and subject.strip(), f"{module_label}.subject 不能为空。")
+        _require(isinstance(subject_code, str) and subject_code.strip(), f"{module_label}.subject_code 不能为空。")
+        _require(subject not in subjects and subject_code not in subject_codes, f"{module_label} 模块重复。")
+        subjects.add(subject)
+        subject_codes.add(subject_code)
+        _require(group["duration"] == 40, f"{module_label}.duration 必须固定为 40。")
+        items = group["items"]
+        _require(isinstance(items, list), f"{module_label}.items 必须是数组。")
+        total_duration += group["duration"]
+        total_questions += len(items)
+
+        for index, question in enumerate(items, 1):
+            label = f"{subject} 第 {index} 题"
+            _require(isinstance(question, dict) and set(question) == PROJECT_QUESTION_FIELDS, f"{label}字段集合不符合项目契约。")
+            _require(question["number"] == index, f"{label}.number 必须在模块内从 1 连续编号。")
+            _require(question["code"] not in codes, f"{label}.code 在同一试卷中重复。")
+            codes.add(question["code"])
+            _require(question["examType"] == "ESAT", f"{label}.examType 必须是 ESAT。")
+            _require(question["source_examType"] in {"ENGAA", "NSAA"}, f"{label}.source_examType 必须是 ENGAA 或 NSAA。")
+            _require(question["year"] == metadata["year"], f"{label}.year 与试卷年份不一致。")
+            _require(question["question_type"] in {"single_choice", "multiple_choice", "short_answer"}, f"{label}.question_type 不受支持。")
+            _require(question["difficulty"] in PROJECT_DIFFICULTIES, f"{label}.difficulty 不受支持。")
+            _require(isinstance(question["answer"], list) and question["answer"], f"{label}.answer 必须是非空数组。")
+            _require(isinstance(question["content_blocks"], list) and question["content_blocks"], f"{label}.content_blocks 不能为空。")
+            first = question["content_blocks"][0]
+            _require(first == {"type": "paragraph", "text": question["title"]}, f"{label}.title 必须等于首个 paragraph。")
+            image_ids = {item["id"] for item in question["images"]}
+            referenced_ids = {
+                block["image_id"]
+                for block in question["content_blocks"]
+                if block["type"] == "image_ref"
+            }
+            referenced_ids.update(option["image_id"] for option in question["options"] if "image_id" in option)
+            _require(referenced_ids <= image_ids, f"{label}存在未定义的图片引用。")
+            _require(all(item.get("type") in {"svg", "image"} and item.get("id") and item.get("alt") for item in question["images"]), f"{label}.images 结构无效。")
+            _require(all((item["type"] == "svg" and isinstance(item.get("svg"), str)) or (item["type"] == "image" and isinstance(item.get("src"), str)) for item in question["images"]), f"{label}.images 缺少自包含资源。")
+
+    _require(total_questions > 0, "项目诊断卷至少需要一道题。")
+    _require(metadata["totalQuestions"] == total_questions, "metadata.totalQuestions 必须等于所有模块 items.length 之和。")
+    _require(metadata["duration"] == total_duration, "metadata.duration 必须等于所有模块 duration 之和。")
 
 
 def build_project_diagnostic_paper(
@@ -327,7 +416,7 @@ def build_project_diagnostic_paper(
     paper_code: str,
     asset_base_dir: str | Path,
 ) -> dict[str, Any]:
-    """把一个内部 assembled_exam 投影成一个可直接导入项目的完整试卷 JSON。"""
+    """把内部 assembled_exam 投影成按模块分组的项目诊断卷 JSON。"""
 
     _require(assembled_document.get("document_type") == "assembled_exam", "只能从 assembled_exam 导出项目诊断卷。")
     _require(assembled_document.get("validation_status") == "passed", "assembled_exam 尚未通过内部校验。")
@@ -335,15 +424,14 @@ def build_project_diagnostic_paper(
     year = _as_year(metadata["year"])
     assembly = metadata.get("assembly")
     remarks = _project_remarks(assembly)
-    questions = [
-        _project_question(
-            question,
-            number=index,
-            year=year,
-            asset_base_dir=Path(asset_base_dir).resolve(),
-        )
-        for index, question in enumerate(assembled_document["questions"], 1)
-    ]
+    paper_type = metadata.get("paper_type", "realPaper")
+    _require(paper_type == "realPaper", "真实 ENGAA/NSAA 题目重组的 ESAT 诊断卷必须导出为 realPaper。")
+    groups = _project_module_groups(
+        assembled_document,
+        year=year,
+        asset_base_dir=Path(asset_base_dir).resolve(),
+    )
+    total_questions = sum(len(group["items"]) for group in groups)
     document = {
         "code": paper_code,
         "metadata": {
@@ -351,11 +439,11 @@ def build_project_diagnostic_paper(
             "year": year,
             "duration": assembly["official_full_test_time_minutes"],
             "examType": "ESAT",
-            "paperType": "mockPaper",
-            "totalQuestions": len(questions),
+            "paperType": paper_type,
+            "totalQuestions": total_questions,
             "remarks": remarks,
         },
-        "questions": questions,
+        "questions": groups,
     }
     validate_project_diagnostic_paper(document)
     return document

@@ -11,6 +11,7 @@ from typing import Any
 
 from .contract import ContractError, build_document, validate_document
 from .esat_syllabus import esat_root, module_descriptor, syllabus_items_for_codes
+from .deduplication import deduplicate_questions
 
 
 ESAT_MODULES = ("Mathematics 1", "Biology", "Chemistry", "Physics", "Mathematics 2")
@@ -82,16 +83,20 @@ def _candidate_buckets(source_document: dict[str, Any]) -> dict[str, list[dict[s
     buckets: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for question in source_document["questions"]:
         scope = question["target_exam_scope"]
-        primary = scope["primary_module"]
+        subject = question["subject"]
+        if subject not in ESAT_MODULES:
+            continue
+        descriptor = module_descriptor(subject)
         if (
             scope["target_exam"] == "ESAT"
-            and scope["status"] == "in_scope"
-            and scope["review_status"] == "reviewed"
-            and primary in ESAT_MODULES
+            and scope["scope_status"] == "in_scope"
+            and scope["mapping_status"] in {"auto_verified", "human_verified"}
+            and scope["modules"] == [subject]
+            and question["subject_code"] == descriptor["module_code"]
             and question["question_type"] == "multiple_choice"
             and not question["is_ai_generated"]
         ):
-            buckets[primary].append(question)
+            buckets[subject].append(question)
     for module in buckets:
         buckets[module].sort(key=lambda item: (str(item["year"]), str(item["source_examType"]), int(item["questionNumber"]) if isinstance(item["questionNumber"], int) else str(item["questionNumber"]), item["code"]))
     return buckets
@@ -103,6 +108,18 @@ def _question_features(question: dict[str, Any]) -> tuple[str, str, str]:
     return family, question["difficulty"], question["source_examType"]
 
 
+def _deduplicate_candidates(
+    candidates: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Remove confirmed duplicates while retaining ambiguous same-stem questions."""
+
+    unique, report = deduplicate_questions(candidates)
+    if report["blocking_conflicts"]:
+        codes = [item["codes"] for item in report["blocking_conflicts"]]
+        raise ContractError(f"候选题存在重复题答案或考纲归属冲突，必须先复核：{codes}")
+    return unique, report["confirmed_duplicates"]
+
+
 def suggested_time_minutes(actual_question_count: int) -> int:
     """组合诊断卷始终保留 ESAT 官方每模块 40 分钟时长。"""
 
@@ -110,22 +127,35 @@ def suggested_time_minutes(actual_question_count: int) -> int:
 
 
 def _select_questions(candidates: list[dict[str, Any]], target_count: int) -> list[dict[str, Any]]:
-    if len(candidates) <= target_count:
-        return list(candidates)
+    unique_candidates, _ = _deduplicate_candidates(candidates)
+    return _select_from_unique_candidates(unique_candidates, target_count)
+
+
+def _select_from_unique_candidates(
+    unique_candidates: list[dict[str, Any]],
+    target_count: int,
+) -> list[dict[str, Any]]:
+    """从已经去重的候选池中执行覆盖度与题源平衡选择。"""
+
+    if len(unique_candidates) <= target_count:
+        return list(unique_candidates)
     selected: list[dict[str, Any]] = []
     used_codes: set[str] = set()
+    syllabus_counts: Counter[str] = Counter()
     family_counts: Counter[str] = Counter()
     difficulty_counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()
 
     while len(selected) < target_count:
         best: dict[str, Any] | None = None
-        best_score: tuple[int, int, int, int, str] | None = None
-        for question in candidates:
+        best_score: tuple[int, int, int, int, int, str] | None = None
+        for question in unique_candidates:
             if question["code"] in used_codes:
                 continue
             family, difficulty, source = _question_features(question)
+            syllabus_codes = question["target_exam_scope"].get("syllabus_codes", [])
             score = (
+                sum(syllabus_counts[code] for code in syllabus_codes),
                 family_counts[family],
                 difficulty_counts[difficulty],
                 source_counts[source],
@@ -143,10 +173,20 @@ def _select_questions(candidates: list[dict[str, Any]], target_count: int) -> li
         family_counts[family] += 1
         difficulty_counts[difficulty] += 1
         source_counts[source] += 1
+        for code in best["target_exam_scope"].get("syllabus_codes", []):
+            syllabus_counts[code] += 1
     return selected
 
 
-def _module_summary(module: str, candidates: list[dict[str, Any]], selected: list[dict[str, Any]], target_count: int) -> dict[str, Any]:
+def _module_summary(
+    module: str,
+    candidates: list[dict[str, Any]],
+    selected: list[dict[str, Any]],
+    target_count: int,
+    *,
+    raw_candidate_count: int | None = None,
+    duplicate_records: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     descriptor = module_descriptor(module)
     selected_codes = [item["code"] for item in selected]
     syllabus_codes = sorted({code for item in selected for code in item["target_exam_scope"]["syllabus_codes"]})
@@ -171,6 +211,10 @@ def _module_summary(module: str, candidates: list[dict[str, Any]], selected: lis
     elif len(selected) < target_count or len(family_codes) <= 1:
         confidence = "medium"
     notes: list[str] = []
+    duplicate_records = duplicate_records or []
+    raw_candidate_count = len(candidates) if raw_candidate_count is None else raw_candidate_count
+    if duplicate_records:
+        notes.append(f"候选题中识别并排除 {len(duplicate_records)} 道重复题。")
     if len(selected) < target_count:
         notes.append(f"题量不足：目标 {target_count} 题，实际 {len(selected)} 题。")
     elif len(candidates) > target_count:
@@ -197,6 +241,9 @@ def _module_summary(module: str, candidates: list[dict[str, Any]], selected: lis
         "target_question_count": target_count,
         "actual_question_count": len(selected),
         "available_question_count": len(candidates),
+        "raw_available_question_count": raw_candidate_count,
+        "duplicate_question_count": len(duplicate_records),
+        "deduplicated_questions": duplicate_records,
         "diagnostic_status": diagnostic_status,
         "diagnostic_flags": status_parts,
         "diagnostic_confidence": confidence,
@@ -216,6 +263,8 @@ def analyze_assembly(source_document: dict[str, Any], constraints: dict[str, Any
     """分析并规划 ESAT legacy 诊断卷；不会因缺题而拒绝。"""
 
     validate_document(source_document, expected_type="parsed_exam")
+    source_paper_type = source_document["metadata"]["paper_type"]
+    _require(source_paper_type == "realPaper", "ESAT legacy 诊断组卷只能使用 realPaper 真题题库。")
     source_types = set(source_document["metadata"].get("source_exam_types", []))
     _require(source_types == {"ENGAA", "NSAA"}, "ESAT legacy 年度题库必须且只能合并同年 ENGAA 与 NSAA 来源。")
     source_year = source_document["metadata"]["year"]
@@ -241,22 +290,31 @@ def analyze_assembly(source_document: dict[str, Any], constraints: dict[str, Any
     selected_by_module: dict[str, list[dict[str, Any]]] = {}
     module_reports: dict[str, Any] = {}
     for module in modules:
-        candidates = buckets.get(module, [])
-        selected = _select_questions(candidates, targets[module])
+        raw_candidates = buckets.get(module, [])
+        candidates, duplicate_records = _deduplicate_candidates(raw_candidates)
+        selected = _select_from_unique_candidates(candidates, targets[module])
         selected_by_module[module] = selected
-        module_reports[module] = _module_summary(module, candidates, selected, targets[module])
+        module_reports[module] = _module_summary(
+            module,
+            candidates,
+            selected,
+            targets[module],
+            raw_candidate_count=len(raw_candidates),
+            duplicate_records=duplicate_records,
+        )
 
     invalid_or_excluded = [
         {
             "code": item["code"],
-            "status": item["target_exam_scope"]["status"],
-            "primary_module": item["target_exam_scope"]["primary_module"],
-            "review_status": item["target_exam_scope"]["review_status"],
-            "reasons": item["target_exam_scope"]["exclusion_reasons"],
+            "subject": item["subject"],
+            "scope_status": item["target_exam_scope"]["scope_status"],
+            "mapping_status": item["target_exam_scope"]["mapping_status"],
+            "mapping_reason": item["target_exam_scope"].get("mapping_reason"),
         }
         for item in source_document["questions"]
-        if item["target_exam_scope"]["status"] != "in_scope"
-        or item["target_exam_scope"]["review_status"] != "reviewed"
+        if item["target_exam_scope"]["scope_status"] != "in_scope"
+        or item["target_exam_scope"]["mapping_status"] not in {"auto_verified", "human_verified"}
+        or item["target_exam_scope"]["modules"] != [item["subject"]]
         or item["question_type"] != "multiple_choice"
         or item["is_ai_generated"]
     ]
@@ -279,7 +337,7 @@ def analyze_assembly(source_document: dict[str, Any], constraints: dict[str, Any
         "invalid_or_excluded_questions": invalid_or_excluded,
         "source_summary": {
             "question_count": len(source_document["questions"]),
-            "scope_statuses": dict(Counter(item["target_exam_scope"]["status"] for item in source_document["questions"])),
+            "scope_statuses": dict(Counter(item["target_exam_scope"]["scope_status"] for item in source_document["questions"])),
             "source_exam_types": list(source_document["metadata"].get("source_exam_types", [])),
         },
     }
@@ -349,6 +407,7 @@ def build_assembled_exam(source_document: dict[str, Any], constraints: dict[str,
     _require(selected, "没有题目符合当前 ESAT 模块组合。")
     metadata = {
         "exam_type": "ESAT",
+        "paper_type": "realPaper",
         "year": source_document["metadata"]["year"],
         "source_files": list(source_document["metadata"]["source_files"]),
         "target_exam": "ESAT",

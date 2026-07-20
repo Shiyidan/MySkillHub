@@ -8,6 +8,7 @@
 {
   "metadata": {
     "exam_type": "ESAT",
+    "paper_type": "realPaper",
     "year": 2023,
     "source_files": ["ENGAA_2023.pdf", "NSAA_2023.pdf"],
     "target_exam": "ESAT",
@@ -43,7 +44,7 @@
   "year": 2023,
   "questionNumber": 1,
   "subject": "Mathematics 1",
-  "subject_code": "math1",
+  "subject_code": "110000",
   "topic": "Equations and simultaneous equations",
   "topic_code": "110415",
   "question_type": "multiple_choice",
@@ -81,11 +82,9 @@
   "diagram": null,
   "target_exam_scope": {
     "target_exam": "ESAT",
-    "status": "in_scope",
+    "scope_status": "in_scope",
+    "mapping_status": "human_verified",
     "modules": ["Mathematics 1"],
-    "primary_module": "Mathematics 1",
-    "primary_module_code": "110000",
-    "primary_module_label": "Mathematics 1 (数学1)",
     "syllabus_codes": ["110415"],
     "syllabus_items": [
       {
@@ -104,10 +103,7 @@
           "Equations and simultaneous equations (方程与联立方程)"
         ]
       }
-    ],
-    "exclusion_reasons": [],
-    "evidence": "本题是一元一次方程，落在 ESAT Mathematics 1 的代数与方程范围内。",
-    "review_status": "reviewed"
+    ]
   },
   "source": {
     "question": {"file": "NSAA_2023.pdf", "page": 1},
@@ -123,16 +119,12 @@
 ```json
 "target_exam_scope": {
   "target_exam": "ESAT",
-  "status": "out_of_scope",
+  "scope_status": "out_of_scope",
+  "mapping_status": "human_verified",
   "modules": [],
-  "primary_module": null,
-  "primary_module_code": null,
-  "primary_module_label": null,
   "syllabus_codes": [],
   "syllabus_items": [],
-  "exclusion_reasons": ["本题考查逻辑门真值表，不属于 ESAT Mathematics 1/Biology/Chemistry/Physics/Mathematics 2 当前考纲。"],
-  "evidence": "按 esat_syllabus.json 的模块和考纲项核对，逻辑门内容无对应 ESAT 标准考纲代码。",
-  "review_status": "reviewed"
+  "mapping_reason": "本题考查逻辑门真值表，在 ESAT 当前考纲中没有对应知识点。"
 }
 ```
 
@@ -141,11 +133,9 @@
 ```json
 "target_exam_scope": {
   "target_exam": "ESAT",
-  "status": "partially_in_scope",
+  "scope_status": "partially_in_scope",
+  "mapping_status": "human_verified",
   "modules": ["Physics"],
-  "primary_module": "Physics",
-  "primary_module_code": "130000",
-  "primary_module_label": "Physics (物理)",
   "syllabus_codes": ["130304"],
   "syllabus_items": [
     {
@@ -160,9 +150,7 @@
       "path_labels": ["ESAT (工程与科学入学测试)", "Physics (物理)", "Mechanics (力学)", "Newton's laws (牛顿定律)"]
     }
   ],
-  "exclusion_reasons": ["题目主体涉及牛顿定律，但另含超出 ESAT 当前 Physics 范围的实验装置细节。"],
-  "evidence": "力学主干可映射到 130304，但题目部分设问依赖不在 ESAT 当前考纲内的实验细节。",
-  "review_status": "reviewed"
+  "mapping_reason": "力学主干可映射到牛顿定律，但部分设问依赖超出当前考纲的实验细节。"
 }
 ```
 

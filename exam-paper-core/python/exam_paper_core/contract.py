@@ -19,7 +19,7 @@ from .esat_syllabus import esat_root, module_descriptor, syllabus_item, syllabus
 from .fingerprint import question_fingerprint
 from .syllabus_index import syllabus_item_for_exam, syllabus_items_for_exam_codes
 
-CONTRACT_VERSION = "3.2.0"
+CONTRACT_VERSION = "3.3.0"
 FINGERPRINT_VERSION = "2"
 DOCUMENT_TYPES = {"parsed_exam", "generated_exam", "assembled_exam"}
 VALIDATION_STATUSES = {"draft", "passed", "failed"}
@@ -27,11 +27,12 @@ ROOT_FIELDS = {
     "contract_version", "document_type", "source_hash", "validation_status",
     "question_fingerprint_version", "locale", "metadata", "questions",
 }
-METADATA_REQUIRED = {"exam_type", "year", "source_files"}
+METADATA_REQUIRED = {"exam_type", "paper_type", "year", "source_files"}
 METADATA_OPTIONAL = {
     "title", "subject", "corpus_group", "syllabus_version",
     "source_exam_types", "target_exam", "assembly",
 }
+PAPER_TYPES = {"realPaper", "mockPaper", "aiPaper"}
 QUESTION_FIELDS = {
     "code", "number", "title", "options", "answer", "images", "examType",
     "source_examType", "year", "questionNumber", "subject", "subject_code",
@@ -42,21 +43,18 @@ QUESTION_FIELDS = {
 ASSEMBLED_QUESTION_FIELDS = QUESTION_FIELDS | {"assembled_section"}
 BLOCK_TYPES = {"text", "latex", "image_ref"}
 QUESTION_TYPES = {"multiple_choice", "free_response"}
-DIFFICULTIES = {"easy", "medium", "hard"}
+DIFFICULTIES = {"easy", "medium", "hard", "composite"}
 IMAGE_ROLES = {"question", "option", "explanation"}
 RESTORE_METHODS = {"vector_extract", "render_crop", "redraw_svg", "not_applicable"}
 IMAGE_STATUSES = {"restored", "not_applicable"}
 TRACE_SOURCES = {"official_solution", "official_answer", "independent_derivation"}
 TARGET_SCOPE_STATUSES = {"in_scope", "out_of_scope", "partially_in_scope", "unknown"}
-TARGET_SCOPE_REVIEWS = {"unchecked", "reviewed", "needs_review"}
+TARGET_SCOPE_MAPPING_STATUSES = {"auto_verified", "human_verified", "needs_review"}
+VERIFIED_MAPPING_STATUSES = {"auto_verified", "human_verified"}
 ESAT_MODULES = {"Mathematics 1", "Biology", "Chemistry", "Physics", "Mathematics 2"}
 ESAT_OFFICIAL_MODULE_QUESTION_COUNT = 27
 ESAT_OFFICIAL_MODULE_TIME_MINUTES = 40
 TMUA_PAPERS = {"Paper 1", "Paper 2"}
-TMUA_PAPER_DESCRIPTORS = {
-    "Paper 1": {"code": "TMUA-P1", "label": "Paper 1: Mathematical Thinking"},
-    "Paper 2": {"code": "TMUA-P2", "label": "Paper 2: Mathematical Reasoning"},
-}
 TMUA_PAPER_ALLOWED_SYLLABUS_MODULES = {
     "Paper 1": {"Mathematics 1", "Mathematics 2"},
     "Paper 2": {"Mathematics 1", "Mathematics 2", "Logic & Proof"},
@@ -454,106 +452,89 @@ def _validate_generated_source(question: dict[str, Any], label: str) -> None:
 
 
 def _validate_target_exam_scope(question: dict[str, Any], label: str) -> None:
-    scope = _exact_fields(
-        question["target_exam_scope"],
-        {
-            "target_exam",
-            "status",
-            "modules",
-            "primary_module",
-            "primary_module_code",
-            "primary_module_label",
-            "syllabus_codes",
-            "syllabus_items",
-            "exclusion_reasons",
-            "evidence",
-            "review_status",
-        },
-        f"{label}.target_exam_scope",
-    )
+    scope = question["target_exam_scope"]
+    required = {
+        "target_exam",
+        "scope_status",
+        "mapping_status",
+        "modules",
+        "syllabus_codes",
+        "syllabus_items",
+    }
+    optional = {"mapping_reason"}
+    _require(isinstance(scope, dict), f"{label}.target_exam_scope 必须是对象。")
+    _require(not required - set(scope), f"{label}.target_exam_scope 缺少字段：{sorted(required - set(scope))}")
+    _require(not set(scope) - required - optional, f"{label}.target_exam_scope 包含未知字段：{sorted(set(scope) - required - optional)}")
     target_exam = _nonempty_text(scope["target_exam"], f"{label}.target_exam_scope.target_exam 不能为空。")
-    _require(scope["status"] in TARGET_SCOPE_STATUSES, f"{label}.target_exam_scope.status 不受支持。")
-    _require(scope["review_status"] in TARGET_SCOPE_REVIEWS, f"{label}.target_exam_scope.review_status 不受支持。")
+    scope_status = scope["scope_status"]
+    mapping_status = scope["mapping_status"]
+    _require(scope_status in TARGET_SCOPE_STATUSES, f"{label}.target_exam_scope.scope_status 不受支持。")
+    _require(mapping_status in TARGET_SCOPE_MAPPING_STATUSES, f"{label}.target_exam_scope.mapping_status 不受支持。")
     _require(isinstance(scope["modules"], list), f"{label}.target_exam_scope.modules 必须是数组。")
     _require(isinstance(scope["syllabus_codes"], list), f"{label}.target_exam_scope.syllabus_codes 必须是数组。")
     _require(isinstance(scope["syllabus_items"], list), f"{label}.target_exam_scope.syllabus_items 必须是数组。")
-    _require(isinstance(scope["exclusion_reasons"], list), f"{label}.target_exam_scope.exclusion_reasons 必须是数组。")
-    _require(isinstance(scope["evidence"], str) and len(scope["evidence"].strip()) >= 10, f"{label}.target_exam_scope.evidence 必须说明判断依据。")
     _require(all(isinstance(item, str) and item.strip() for item in scope["modules"]), f"{label}.target_exam_scope.modules 必须是非空字符串数组。")
     _require(all(isinstance(item, str) and item.strip() for item in scope["syllabus_codes"]), f"{label}.target_exam_scope.syllabus_codes 必须是字符串数组。")
-    _require(all(isinstance(item, str) and item.strip() for item in scope["exclusion_reasons"]), f"{label}.target_exam_scope.exclusion_reasons 必须是字符串数组。")
+    _require(len(scope["modules"]) == len(set(scope["modules"])), f"{label}.target_exam_scope.modules 不得重复。")
+    _require(len(scope["syllabus_codes"]) == len(set(scope["syllabus_codes"])), f"{label}.target_exam_scope.syllabus_codes 不得重复。")
+    mapping_reason = scope.get("mapping_reason")
+    if mapping_reason is not None:
+        _nonempty_text(mapping_reason, f"{label}.target_exam_scope.mapping_reason 内容不足。", 10)
+    if scope_status != "in_scope" or mapping_status == "needs_review":
+        _require(mapping_reason is not None, f"{label}.target_exam_scope 当前状态必须写 mapping_reason。")
     if target_exam == "ESAT":
         unknown_modules = set(scope["modules"]) - ESAT_MODULES
         _require(not unknown_modules, f"{label}.target_exam_scope.modules 包含非 ESAT 模块：{sorted(unknown_modules)}")
-        primary = scope["primary_module"]
-        _require(primary is None or primary in ESAT_MODULES, f"{label}.target_exam_scope.primary_module 不是 ESAT 模块。")
-        if primary is None:
-            _require(scope["primary_module_code"] is None, f"{label}.target_exam_scope.primary_module_code 必须为 null。")
-            _require(scope["primary_module_label"] is None, f"{label}.target_exam_scope.primary_module_label 必须为 null。")
-        else:
-            descriptor = module_descriptor(primary)
-            _require(scope["primary_module_code"] == descriptor["module_code"], f"{label}.target_exam_scope.primary_module_code 与 esat_syllabus 不一致。")
-            _require(scope["primary_module_label"] == descriptor["module_label"], f"{label}.target_exam_scope.primary_module_label 与 esat_syllabus 不一致。")
         expected_items, unmatched = syllabus_items_for_codes(scope["syllabus_codes"])
         _require(not unmatched, f"{label}.target_exam_scope.syllabus_codes 包含非 ESAT syllabus code：{unmatched}")
         _validate_syllabus_item_list(scope["syllabus_items"], f"{label}.target_exam_scope.syllabus_items", expected_items)
-        for item in expected_items:
-            _require(item["module"] in scope["modules"], f"{label}.target_exam_scope.syllabus_items 包含不属于 modules 的考纲项：{item['code']}")
-        if scope["status"] == "in_scope":
-            _require(bool(scope["modules"]), f"{label}标为 ESAT in_scope 时必须给出模块。")
-            _require(primary in scope["modules"], f"{label}.primary_module 必须属于 modules。")
+        if scope_status in {"in_scope", "partially_in_scope"}:
+            _require(len(scope["modules"]) == 1, f"{label}每题必须归属一个 ESAT 科目。")
+            subject = scope["modules"][0]
+            _require(question["subject"] == subject, f"{label}.subject 必须与 target_exam_scope.modules 唯一科目一致。")
+            descriptor = module_descriptor(subject)
+            _require(question["subject_code"] == descriptor["module_code"], f"{label}.subject_code 与 esat_syllabus 科目代码不一致。")
+            _require(all(item["module"] == subject for item in expected_items), f"{label}.target_exam_scope.syllabus_items 必须全部属于 subject。")
+        if scope_status == "in_scope":
             _require(bool(scope["syllabus_codes"]), f"{label}标为 ESAT in_scope 时必须给出考纲代码。")
             _require(bool(scope["syllabus_items"]), f"{label}标为 ESAT in_scope 时必须给出 syllabus_items。")
-            _require(not scope["exclusion_reasons"], f"{label}标为 ESAT in_scope 时不得写排除原因。")
-        elif scope["status"] == "out_of_scope":
+        elif scope_status == "out_of_scope":
             _require(not scope["modules"], f"{label}标为 ESAT out_of_scope 时 modules 必须为空。")
-            _require(primary is None, f"{label}标为 ESAT out_of_scope 时 primary_module 必须为 null。")
             _require(not scope["syllabus_codes"], f"{label}标为 ESAT out_of_scope 时 syllabus_codes 必须为空。")
             _require(not scope["syllabus_items"], f"{label}标为 ESAT out_of_scope 时 syllabus_items 必须为空。")
-            _require(bool(scope["exclusion_reasons"]), f"{label}标为 ESAT out_of_scope 时必须写明排除原因。")
-        elif scope["status"] == "partially_in_scope":
-            _require(bool(scope["modules"]), f"{label}标为 ESAT partially_in_scope 时必须给出可用模块。")
-            _require(primary in scope["modules"], f"{label}.primary_module 必须属于 modules。")
+        elif scope_status == "partially_in_scope":
             _require(bool(scope["syllabus_codes"]), f"{label}标为 ESAT partially_in_scope 时必须给出可用考纲代码。")
             _require(bool(scope["syllabus_items"]), f"{label}标为 ESAT partially_in_scope 时必须给出可用 syllabus_items。")
-            _require(bool(scope["exclusion_reasons"]), f"{label}标为 ESAT partially_in_scope 时必须说明排除或部分超纲原因。")
+        else:
+            _require(not scope["modules"], f"{label}标为 ESAT unknown 时 modules 必须为空。")
+            _require(not scope["syllabus_codes"], f"{label}标为 ESAT unknown 时 syllabus_codes 必须为空。")
+            _require(not scope["syllabus_items"], f"{label}标为 ESAT unknown 时 syllabus_items 必须为空。")
     elif target_exam == "TMUA":
         unknown_papers = set(scope["modules"]) - TMUA_PAPERS
         _require(not unknown_papers, f"{label}.target_exam_scope.modules 包含非 TMUA paper：{sorted(unknown_papers)}")
-        primary = scope["primary_module"]
-        _require(primary is None or primary in TMUA_PAPERS, f"{label}.target_exam_scope.primary_module 不是 TMUA paper。")
-        if primary is None:
-            _require(scope["primary_module_code"] is None, f"{label}.target_exam_scope.primary_module_code 必须为 null。")
-            _require(scope["primary_module_label"] is None, f"{label}.target_exam_scope.primary_module_label 必须为 null。")
-        else:
-            descriptor = TMUA_PAPER_DESCRIPTORS[primary]
-            _require(scope["primary_module_code"] == descriptor["code"], f"{label}.target_exam_scope.primary_module_code 与 TMUA paper 不一致。")
-            _require(scope["primary_module_label"] == descriptor["label"], f"{label}.target_exam_scope.primary_module_label 与 TMUA paper 不一致。")
         expected_items, unmatched = syllabus_items_for_exam_codes("TMUA", scope["syllabus_codes"])
         _require(not unmatched, f"{label}.target_exam_scope.syllabus_codes 包含非 TMUA syllabus code：{unmatched}")
         _validate_tmua_syllabus_item_list(scope["syllabus_items"], f"{label}.target_exam_scope.syllabus_items", expected_items)
-        if primary is not None:
-            allowed_modules = TMUA_PAPER_ALLOWED_SYLLABUS_MODULES[primary]
+        if scope_status in {"in_scope", "partially_in_scope"}:
+            _require(len(scope["modules"]) == 1, f"{label}每题必须归属一个 TMUA paper。")
+            paper = scope["modules"][0]
+            allowed_modules = TMUA_PAPER_ALLOWED_SYLLABUS_MODULES[paper]
             disallowed = [item["code"] for item in expected_items if item["module"] not in allowed_modules]
-            _require(not disallowed, f"{label}.target_exam_scope.syllabus_items 不属于 {primary} 可用范围：{disallowed}")
-        if scope["status"] == "in_scope":
-            _require(bool(scope["modules"]), f"{label}标为 TMUA in_scope 时必须给出 paper。")
-            _require(primary in scope["modules"], f"{label}.primary_module 必须属于 modules。")
+            _require(not disallowed, f"{label}.target_exam_scope.syllabus_items 不属于 {paper} 可用范围：{disallowed}")
+        if scope_status == "in_scope":
             _require(bool(scope["syllabus_codes"]), f"{label}标为 TMUA in_scope 时必须给出考纲代码。")
             _require(bool(scope["syllabus_items"]), f"{label}标为 TMUA in_scope 时必须给出 syllabus_items。")
-            _require(not scope["exclusion_reasons"], f"{label}标为 TMUA in_scope 时不得写排除原因。")
-        elif scope["status"] == "out_of_scope":
+        elif scope_status == "out_of_scope":
             _require(not scope["modules"], f"{label}标为 TMUA out_of_scope 时 modules 必须为空。")
-            _require(primary is None, f"{label}标为 TMUA out_of_scope 时 primary_module 必须为 null。")
             _require(not scope["syllabus_codes"], f"{label}标为 TMUA out_of_scope 时 syllabus_codes 必须为空。")
             _require(not scope["syllabus_items"], f"{label}标为 TMUA out_of_scope 时 syllabus_items 必须为空。")
-            _require(bool(scope["exclusion_reasons"]), f"{label}标为 TMUA out_of_scope 时必须写明排除原因。")
-        elif scope["status"] == "partially_in_scope":
-            _require(bool(scope["modules"]), f"{label}标为 TMUA partially_in_scope 时必须给出可用 paper。")
-            _require(primary in scope["modules"], f"{label}.primary_module 必须属于 modules。")
+        elif scope_status == "partially_in_scope":
             _require(bool(scope["syllabus_codes"]), f"{label}标为 TMUA partially_in_scope 时必须给出可用考纲代码。")
             _require(bool(scope["syllabus_items"]), f"{label}标为 TMUA partially_in_scope 时必须给出可用 syllabus_items。")
-            _require(bool(scope["exclusion_reasons"]), f"{label}标为 TMUA partially_in_scope 时必须说明排除或部分超纲原因。")
+        else:
+            _require(not scope["modules"], f"{label}标为 TMUA unknown 时 modules 必须为空。")
+            _require(not scope["syllabus_codes"], f"{label}标为 TMUA unknown 时 syllabus_codes 必须为空。")
+            _require(not scope["syllabus_items"], f"{label}标为 TMUA unknown 时 syllabus_items 必须为空。")
 
 
 def _validate_assembled_section(question: dict[str, Any], label: str) -> None:
@@ -570,7 +551,8 @@ def _validate_assembled_section(question: dict[str, Any], label: str) -> None:
     _require(section["scoring_group"] == module, f"{label}.assembled_section.scoring_group 必须与 module 一致。")
     _require(isinstance(section["section_order"], int) and not isinstance(section["section_order"], bool) and section["section_order"] > 0, f"{label}.assembled_section.section_order 必须是正整数。")
     _require(isinstance(section["question_order"], int) and not isinstance(section["question_order"], bool) and section["question_order"] > 0, f"{label}.assembled_section.question_order 必须是正整数。")
-    _require(question["target_exam_scope"]["primary_module"] == module, f"{label}.assembled_section.module 必须与 target_exam_scope.primary_module 一致。")
+    _require(question["subject"] == module, f"{label}.assembled_section.module 必须与 subject 一致。")
+    _require(question["target_exam_scope"]["modules"] == [module], f"{label}.target_exam_scope.modules 必须只包含 assembled_section.module。")
     _validate_syllabus_item_list(section["syllabus_items"], f"{label}.assembled_section.syllabus_items", question["target_exam_scope"]["syllabus_items"])
 
 
@@ -598,6 +580,11 @@ def _validate_question(question: Any, index: int, document_type: str) -> None:
             if block["type"] == "image_ref": referenced_ids.add(block["image_id"])
     _require(referenced_ids <= image_ids, f"{label}包含未定义的 image_ref。")
     _validate_knowledge_points(question, label)
+    if question["difficulty"] == "composite":
+        _require(
+            len(question["knowledge_points"]) >= 2,
+            f"{label}.difficulty 为 composite 时必须至少包含两个实际参与求解的知识点。",
+        )
     _validate_target_exam_scope(question, label)
     if question["target_exam_scope"]["target_exam"] == "TMUA":
         _require(question["question_type"] == "multiple_choice", f"{label}TMUA 题目必须是 multiple_choice。")
@@ -811,6 +798,11 @@ def validate_document(document: Any, expected_type: str | None = None) -> None:
     unknown = set(metadata) - METADATA_REQUIRED - METADATA_OPTIONAL
     _require(not missing, f"metadata 缺少字段：{sorted(missing)}")
     _require(not unknown, f"metadata 包含未知字段：{sorted(unknown)}")
+    _require(metadata["paper_type"] in PAPER_TYPES, "metadata.paper_type 必须是 realPaper、mockPaper 或 aiPaper。")
+    if document_type == "generated_exam":
+        _require(metadata.get("paper_type") == "aiPaper", "generated_exam 的 metadata.paper_type 必须是 aiPaper。")
+    if document_type == "assembled_exam":
+        _require(metadata.get("paper_type") == "realPaper", "assembled_exam 的 metadata.paper_type 必须是 realPaper。")
     _nonempty_text(metadata["exam_type"], "metadata.exam_type 不能为空。")
     _require(isinstance(metadata["year"], (str, int)) and not isinstance(metadata["year"], bool), "metadata.year 必须是年份。")
     _require(isinstance(metadata["source_files"], list) and bool(metadata["source_files"]) and all(isinstance(item, str) and item.strip() for item in metadata["source_files"]), "metadata.source_files 必须是非空字符串数组。")
@@ -838,7 +830,8 @@ def validate_document(document: Any, expected_type: str | None = None) -> None:
         if document_type == "assembled_exam":
             assembly_modules = set(metadata["assembly"]["modules"])
             scope = question["target_exam_scope"]
-            _require(scope["status"] == "in_scope", f"{question['code']} 未标为 ESAT in_scope，不能进入组卷。")
+            _require(scope["scope_status"] == "in_scope", f"{question['code']} 未标为 ESAT in_scope，不能进入组卷。")
+            _require(scope["mapping_status"] in VERIFIED_MAPPING_STATUSES, f"{question['code']} 的考纲映射尚未验证，不能进入组卷。")
             _require(set(scope["modules"]) <= assembly_modules, f"{question['code']} 的模块不属于当前组卷组合。")
             section = question["assembled_section"]
             module = section["module"]

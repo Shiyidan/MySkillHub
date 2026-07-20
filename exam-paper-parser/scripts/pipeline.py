@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from exam_paper_core import (  # noqa: E402
     build_document,
     calculate_source_hash,
     create_stage_receipt,
+    deduplicate_questions,
     read_json,
     scan_tree,
     validate_committed_transaction,
@@ -56,6 +58,7 @@ def _open_state(args: argparse.Namespace) -> PipelineState:
         pipeline=PIPELINE,
         input_hash=_source_hash(args.source),
         stages=STAGES,
+        parameters={"paper_type": args.paper_type},
     )
 
 
@@ -105,23 +108,58 @@ def command_finalize(args: argparse.Namespace) -> None:
         )
     draft = read_json(Path(args.draft))
     _validate_question_transactions(state, draft)
+    metadata = draft.get("metadata")
+    if not isinstance(metadata, dict) or metadata.get("paper_type") != args.paper_type:
+        raise ContractError(
+            "解析草稿 metadata.paper_type 必须与任务入口的 --paper-type 完全一致。"
+        )
+    output = Path(args.output)
+    dedup_report_path = (
+        Path(args.dedup_report)
+        if args.dedup_report
+        else output.with_name(f"{output.stem}.deduplication-report.json")
+    )
+    if output.resolve() == dedup_report_path.resolve():
+        raise ContractError("最终 JSON 与去重报告不能使用同一路径。")
+    unique_questions, dedup_report = deduplicate_questions(draft["questions"])
+    write_json_atomic(dedup_report_path, dedup_report)
+    if dedup_report["blocking_conflicts"]:
+        conflict_codes = [item["codes"] for item in dedup_report["blocking_conflicts"]]
+        raise ContractError(
+            "发现重复题的答案或考纲归属冲突，已写出去重报告；"
+            f"请复核对应逐题事务后重试：{conflict_codes}"
+        )
+    export_draft = copy.deepcopy(draft)
+    export_draft["questions"] = unique_questions
     document = build_document(
-        draft,
+        export_draft,
         document_type="parsed_exam",
         source_hash=state.input_hash,
         validation_status="passed",
     )
-    output = Path(args.output)
     write_json_atomic(output, document)
     receipt = create_stage_receipt(
         Path(args.workdir) / "receipts" / "export.json",
         pipeline=PIPELINE,
         stage="export",
-        method=_fixed_method("封装导出", "用已提交逐题片段封装标准 parsed_exam 文档并写入最终 JSON。", f"导出到 {output.resolve()}"),
-        artifacts=[{"role": "最终 parsed_exam JSON", "path": output}],
+        method=_fixed_method(
+            "去重并封装导出",
+            "先验证全部逐题事务，再按题干、选项、答案和考纲归属执行保守去重，最后封装标准 parsed_exam 文档。",
+            f"导出到 {output.resolve()}；去重报告写入 {dedup_report_path.resolve()}",
+        ),
+        artifacts=[
+            {"role": "最终 parsed_exam JSON", "path": output},
+            {"role": "跨试卷去重报告", "path": dedup_report_path},
+        ],
     )
     state.complete("export", receipt_path=receipt)
     print(f"解析结果已导出：{output.resolve()}")
+    print(
+        "重复题处理："
+        f"确认并排除 {dedup_report['confirmed_duplicate_count']} 道；"
+        f"保留待复核候选 {dedup_report['review_candidate_count']} 组。"
+    )
+    print(f"去重报告：{dedup_report_path.resolve()}")
 
 
 def _method_from_args(args: argparse.Namespace) -> dict[str, str]:
@@ -172,6 +210,12 @@ def add_task_arguments(parser: argparse.ArgumentParser) -> None:
         required=True,
         help="源文件路径；题卷、答卷、评分方案等可重复传入。",
     )
+    parser.add_argument(
+        "--paper-type",
+        required=True,
+        choices=["realPaper", "mockPaper", "aiPaper"],
+        help="入口已确认的试卷类型；该参数参与断点身份，改变后必须建立新任务。",
+    )
     parser.add_argument("--workdir", required=True, help="任务工作目录。")
 
 
@@ -207,6 +251,10 @@ def build_parser() -> argparse.ArgumentParser:
     add_task_arguments(finalize)
     finalize.add_argument("--draft", required=True, help="待封装的草稿 JSON。")
     finalize.add_argument("--output", required=True, help="最终 JSON 输出路径。")
+    finalize.add_argument(
+        "--dedup-report",
+        help="去重审计报告路径；默认与最终 JSON 同目录并使用 .deduplication-report.json 后缀。",
+    )
     finalize.set_defaults(handler=command_finalize)
     return parser
 

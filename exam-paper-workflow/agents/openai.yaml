@@ -1,0 +1,4 @@
+interface:
+  display_name: "英文试卷工作流"
+  short_description: "测试模式下统一路由英文试卷识别与 ESAT 年度六套诊断组卷任务"
+  default_prompt: "使用 $exam-paper-workflow 按 workflow-features.json 创建可恢复任务清单；当前只路由试卷解析或 ESAT 六套诊断组卷，拒绝生题任务。"

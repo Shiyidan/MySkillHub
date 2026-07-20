@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import sys
 import tempfile
 import unittest
@@ -10,7 +11,11 @@ CORE_PYTHON = Path(__file__).resolve().parents[1] / "python"
 if str(CORE_PYTHON) not in sys.path:
     sys.path.insert(0, str(CORE_PYTHON))
 
-from exam_paper_core.project_export import build_project_diagnostic_paper  # noqa: E402
+from exam_paper_core.contract import ContractError  # noqa: E402
+from exam_paper_core.project_export import (  # noqa: E402
+    build_project_diagnostic_paper,
+    validate_project_diagnostic_paper,
+)
 
 
 class ProjectExportTest(unittest.TestCase):
@@ -29,6 +34,7 @@ class ProjectExportTest(unittest.TestCase):
                 "validation_status": "passed",
                 "metadata": {
                     "year": 2023,
+                    "paper_type": "realPaper",
                     "title": "ESAT legacy diagnostic paper: Mathematics 1 + Biology + Physics",
                     "assembly": {
                         "official_full_test_time_minutes": 120,
@@ -36,6 +42,9 @@ class ProjectExportTest(unittest.TestCase):
                         "sections": [
                             {
                                 "module": "Mathematics 1",
+                                "module_code": "110000",
+                                "section_order": 1,
+                                "official_time_minutes": 40,
                                 "actual_question_count": 0,
                                 "target_question_count": 27,
                                 "diagnostic_flags": ["underfilled"],
@@ -43,6 +52,9 @@ class ProjectExportTest(unittest.TestCase):
                             },
                             {
                                 "module": "Biology",
+                                "module_code": "150000",
+                                "section_order": 2,
+                                "official_time_minutes": 40,
                                 "actual_question_count": 0,
                                 "target_question_count": 27,
                                 "diagnostic_flags": ["underfilled"],
@@ -50,6 +62,9 @@ class ProjectExportTest(unittest.TestCase):
                             },
                             {
                                 "module": "Physics",
+                                "module_code": "130000",
+                                "section_order": 3,
+                                "official_time_minutes": 40,
                                 "actual_question_count": 1,
                                 "target_question_count": 27,
                                 "diagnostic_flags": ["underfilled", "narrow_coverage"],
@@ -107,6 +122,10 @@ class ProjectExportTest(unittest.TestCase):
                             "correct_solution": "根据题目条件计算并选择 B。",
                             "review_guidance": "复习力、功和能量关系。",
                         },
+                        "assembled_section": {
+                            "module": "Physics",
+                            "question_order": 1,
+                        },
                     }
                 ],
             }
@@ -117,14 +136,21 @@ class ProjectExportTest(unittest.TestCase):
                 asset_base_dir=root,
             )
 
-        self.assertEqual(result["metadata"]["paperType"], "mockPaper")
+        self.assertEqual(result["metadata"]["paperType"], "realPaper")
         self.assertEqual(result["metadata"]["duration"], 120)
         self.assertEqual(result["metadata"]["totalQuestions"], 1)
+        self.assertEqual(sum(len(group["items"]) for group in result["questions"]), 1)
         self.assertIn("Physics：实际 1/27 题", result["metadata"]["remarks"])
         self.assertIn("题量不足 26 题", result["metadata"]["remarks"])
         self.assertIn("考纲覆盖偏窄", result["metadata"]["remarks"])
         self.assertIn("诊断可信度低", result["metadata"]["remarks"])
-        question = result["questions"][0]
+        self.assertEqual(len(result["questions"]), 3)
+        self.assertEqual(
+            [group["subject"] for group in result["questions"]],
+            ["Mathematics 1", "Biology", "Physics"],
+        )
+        self.assertEqual(result["questions"][2]["duration"], 40)
+        question = result["questions"][2]["items"][0]
         self.assertEqual(question["number"], 1)
         self.assertEqual(question["answer"], ["B"])
         self.assertEqual(question["title"], "A force \\(F\\) acts.")
@@ -132,6 +158,14 @@ class ProjectExportTest(unittest.TestCase):
         self.assertEqual(question["syllabus_points"][0]["role"], "primary")
         self.assertIn("<svg", question["images"][0]["svg"])
         self.assertTrue(question["images"][1]["src"].startswith("data:image/png;base64,"))
+        self.assertNotIn("subject", question)
+        self.assertNotIn("subject_code", question)
+        self.assertNotIn("is_ai_generated", question)
+
+        invalid = copy.deepcopy(result)
+        invalid["metadata"]["paperType"] = "mockPaper"
+        with self.assertRaises(ContractError):
+            validate_project_diagnostic_paper(invalid)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
 interface:
   display_name: "ESAT 真题组卷"
   short_description: "生成带 ESAT 考纲字段的 legacy 诊断组合卷"
-  default_prompt: "使用 $exam-paper-assembler 基于同一年 ENGAA+NSAA 已校验合并 JSON，按 ESAT Mathematics 1 必选和 further modules 四选二规则生成 6 套分模块计时、分模块评分、包含 ESAT syllabus code/label/coverage 字段的 legacy 诊断组合卷。"
+  default_prompt: "使用 $exam-paper-assembler 基于同一年 ENGAA+NSAA 已校验 realPaper 合并 JSON，按 ESAT Mathematics 1 必选和 further modules 四选二规则生成 6 套 paperType=realPaper 的诊断组合卷；最终 questions[0..2] 分别表示三个 40 分钟模块，题目放入各模块 items。"

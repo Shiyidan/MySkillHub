@@ -11,7 +11,7 @@ from .production import file_sha256
 
 
 RECEIPT_VERSION = "3"
-STATE_VERSION = "3"
+STATE_VERSION = "4"
 
 
 def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
@@ -150,11 +150,21 @@ class PipelineCheckpoint:
         pipeline: str,
         input_hash: str,
         stages: Iterable[str],
+        parameters: dict[str, Any] | None = None,
     ) -> "PipelineCheckpoint":
         checkpoint_path = Path(path).resolve()
         stage_list = list(stages)
+        parameter_values = parameters or {}
         if not stage_list or len(stage_list) != len(set(stage_list)):
             raise ValueError("流水线阶段必须非空且不得重复。")
+        if not isinstance(parameter_values, dict):
+            raise ValueError("流水线参数必须是对象。")
+        try:
+            parameter_values = json.loads(
+                json.dumps(parameter_values, ensure_ascii=False, sort_keys=True)
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError("流水线参数必须可以序列化为 JSON。") from exc
         if checkpoint_path.exists():
             data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
             if data.get("state_version") != STATE_VERSION:
@@ -163,6 +173,7 @@ class PipelineCheckpoint:
                 "pipeline": pipeline,
                 "input_hash": input_hash,
                 "stages": stage_list,
+                "parameters": parameter_values,
             }.items():
                 if data.get(key) != expected:
                     raise ValueError(f"流水线检查点身份不一致：{key}")
@@ -172,6 +183,7 @@ class PipelineCheckpoint:
                 "pipeline": pipeline,
                 "input_hash": input_hash,
                 "stages": stage_list,
+                "parameters": parameter_values,
                 "completed_stages": [],
                 "receipts": [],
                 "status": "进行中",
@@ -195,7 +207,9 @@ class PipelineCheckpoint:
 
     def validate(self) -> None:
         if self.data.get("state_version") != STATE_VERSION:
-            raise ValueError("流水线检查点版本必须为 3。")
+            raise ValueError("流水线检查点版本必须为 4。")
+        if not isinstance(self.data.get("parameters"), dict):
+            raise ValueError("流水线检查点 parameters 必须是对象。")
         stages = self.data.get("stages")
         completed = self.data.get("completed_stages")
         receipts = self.data.get("receipts")

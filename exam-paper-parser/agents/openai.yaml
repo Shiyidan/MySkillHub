@@ -1,4 +1,4 @@
 interface:
   display_name: "英文试卷解析"
   short_description: "解析英文真题为带中文详解和考纲字段的标准 JSON"
-  default_prompt: "使用 $exam-paper-parser 解析我提供的英文试卷与官方答案；若为 ESAT legacy 真题，同一年 ENGAA+NSAA 必须进入同一个年度 JSON，并按 3.2.0 契约生成包含 ESAT syllabus code/label/path、target_exam_scope、图形资产和中文详解的标准 parsed_exam。"
+  default_prompt: "使用 $exam-paper-parser 解析我提供的英文试卷与官方答案；若我未说明试卷类型，先确认 realPaper、mockPaper 或 aiPaper。若为 ESAT legacy 真题，同一年 ENGAA+NSAA 必须进入同一个年度 JSON，并按 3.3.0 契约生成包含 paper_type、标准化 subject/subject_code、ESAT syllabus code/label/path、target_exam_scope、图形资产和中文详解的标准 parsed_exam。"

@@ -15,7 +15,7 @@
     "questions"
   ],
   "properties": {
-    "contract_version": {"const": "3.2.0"},
+    "contract_version": {"const": "3.3.0"},
     "document_type": {"enum": ["parsed_exam", "generated_exam", "assembled_exam"]},
     "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "validation_status": {"enum": ["draft", "passed", "failed"]},
@@ -32,9 +32,10 @@
     },
     "metadata": {
       "type": "object",
-      "required": ["exam_type", "year", "source_files"],
+      "required": ["exam_type", "paper_type", "year", "source_files"],
       "properties": {
         "exam_type": {"type": "string", "minLength": 1},
+        "paper_type": {"enum": ["realPaper", "mockPaper", "aiPaper"]},
         "year": {"type": ["string", "integer"]},
         "source_files": {
           "type": "array",
@@ -291,7 +292,7 @@
         "topic": {"type": "string", "minLength": 1},
         "topic_code": {"type": "string", "minLength": 1},
         "question_type": {"enum": ["multiple_choice", "free_response"]},
-        "difficulty": {"enum": ["easy", "medium", "hard"]},
+        "difficulty": {"enum": ["easy", "medium", "hard", "composite"]},
         "knowledge_points": {"type": "array", "minItems": 1},
         "is_ai_generated": {"type": "boolean"},
         "learning_analysis": {"type": "object"},
@@ -318,47 +319,23 @@
           "additionalProperties": false,
           "required": [
             "target_exam",
-            "status",
+            "scope_status",
+            "mapping_status",
             "modules",
-            "primary_module",
-            "primary_module_code",
-            "primary_module_label",
             "syllabus_codes",
-            "syllabus_items",
-            "exclusion_reasons",
-            "evidence",
-            "review_status"
+            "syllabus_items"
           ],
           "properties": {
             "target_exam": {"type": "string", "minLength": 1},
-            "status": {"enum": ["in_scope", "out_of_scope", "partially_in_scope", "unknown"]},
+            "scope_status": {"enum": ["in_scope", "out_of_scope", "partially_in_scope", "unknown"]},
+            "mapping_status": {"enum": ["auto_verified", "human_verified", "needs_review"]},
+            "mapping_reason": {"type": "string", "minLength": 10},
             "modules": {
               "type": "array",
               "items": {"type": "string", "minLength": 1}
             },
-            "primary_module": {
-              "oneOf": [
-                {"type": "string", "minLength": 1},
-                {"type": "null"}
-              ]
-            },
-            "primary_module_code": {
-              "oneOf": [
-                {"type": "string", "minLength": 1},
-                {"type": "null"}
-              ]
-            },
-            "primary_module_label": {
-              "oneOf": [
-                {"type": "string", "minLength": 1},
-                {"type": "null"}
-              ]
-            },
             "syllabus_codes": {"type": "array", "items": {"type": "string", "pattern": "^[0-9]{6}$"}},
-            "syllabus_items": {"type": "array", "items": {"$ref": "#/$defs/syllabus_item"}},
-            "exclusion_reasons": {"type": "array", "items": {"type": "string", "minLength": 1}},
-            "evidence": {"type": "string", "minLength": 10},
-            "review_status": {"enum": ["unchecked", "reviewed", "needs_review"]}
+            "syllabus_items": {"type": "array", "items": {"$ref": "#/$defs/syllabus_item"}}
           }
         },
         "source": {
@@ -419,7 +396,18 @@
             }
           ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"difficulty": {"const": "composite"}},
+            "required": ["difficulty"]
+          },
+          "then": {
+            "properties": {"knowledge_points": {"minItems": 2}}
+          }
+        }
+      ]
     }
   }
 }

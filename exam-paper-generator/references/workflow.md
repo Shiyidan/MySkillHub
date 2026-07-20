@@ -2,10 +2,12 @@
 
 生成质量来自蓝图、推理结构重构和逐题闭环。质量门只做兜底拦截，不负责把低质量草稿修成可发布题目。
 
+本流程生成的试卷类型固定为 `metadata.paper_type=aiPaper`。
+
 ## 1. input_validation
 
 - 使用 `prepare` 校验 `parsed_exam`、`validation_status=passed` 和约束文件。
-- 约束至少包含正整数 `question_count`。
+- 约束至少包含正整数 `question_count`，并按 `generation-constraints.md` 校验允许字段、计数总和和排除母题。
 - 输入 JSON 或约束文件变化后，旧检查点不得继续复用。
 
 ## 2. generation_blueprints
@@ -37,6 +39,8 @@
 - 难度必须在“题内微验证”中重新核对；如果新题实际难度与草稿 difficulty 不一致，回到生成蓝图或推理结构重构步骤返工。
 - TMUA 生成题必须是 `multiple_choice`，并在 `target_exam_scope.modules` 中写入 Paper，而不是 ESAT 模块。
 - 原子提交后题目片段不可再改；发现问题时回到对应步骤局部返工。
+- 使用 `../exam-paper-core/scripts/question_transaction.py` 创建、推进、校验和回退事务，不直接编辑 transaction JSON。
+- 原子提交前使用 `prepare-fragment --mode generator` 计算指纹并验证单题片段；`status` 返回下一步骤和必要输出角色。
 
 ## 4. novelty_review
 

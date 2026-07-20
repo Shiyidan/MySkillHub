@@ -13,7 +13,8 @@ from .contract import (
     validate_document,
     write_json_atomic,
 )
-from .fingerprint import question_fingerprint
+from .fingerprint import question_fingerprint, question_stem_fingerprint
+from .deduplication import deduplicate_questions
 from .preflight import scan_tree
 from .production import QuestionTransaction, validate_committed_transaction
 from .assembly import ESAT_COMBINATIONS, analyze_assembly, build_assembled_exam
@@ -33,7 +34,9 @@ __all__ = [
     "build_project_diagnostic_paper",
     "calculate_source_hash",
     "create_stage_receipt",
+    "deduplicate_questions",
     "question_fingerprint",
+    "question_stem_fingerprint",
     "read_json",
     "scan_tree",
     "validate_committed_transaction",

@@ -8,6 +8,7 @@
 {
   "metadata": {
     "exam_type": "ESAT",
+    "paper_type": "aiPaper",
     "year": 2026,
     "source_files": ["parsed-exam.json"]
   },
@@ -15,11 +16,13 @@
 }
 ```
 
+生成流程的 `metadata.paper_type` 固定为 `aiPaper`，`finalize` 会拒绝 `realPaper` 或 `mockPaper`。
+
 每道题必须已经在逐题事务中完成，并包含：
 
 - 标准题目标识：`code`、`number`、`questionNumber`、`examType`、`source_examType`、`year`。
 - 英文题面内容块：`title`，选项内容块：`options`。
-- 唯一答案、题型、难度、学科、主题、唯一主知识点和 `syllabus_tags`。
+- 唯一答案、题型、难度、学科、主题、唯一主知识点和 `syllabus_tags`。难度只允许 `easy`、`medium`、`hard`、`composite`；`composite` 至少需要两个实际参与求解的知识点。
 - `target_exam_scope`：新题目标考试范围标注，ESAT 新题必须明确模块、考纲代码和判断依据；TMUA 新题必须明确 Paper 1/2、`TMUA-P1/TMUA-P2`、TMUA syllabus code/path 和判断依据。
 - 完整中文 `learning_analysis`，其中 `solution_trace.steps` 至少三步，错误选项逐一解释。
 - 中文 `explanation`，必须包含“目标”“步骤 1/STEP 1”“复核”。
@@ -49,8 +52,7 @@ TMUA 生成字段硬规则：
 
 - `metadata.exam_type` 和 `metadata.target_exam` 均使用 `TMUA`，`metadata.syllabus_version` 使用 `tmua_syllabus.json`。
 - 每题 `question_type` 必须为 `multiple_choice`。
-- `target_exam_scope.modules` 对 TMUA 表示 paper，只允许 `Paper 1` 或 `Paper 2`；不得写 ESAT 模块。
-- `primary_module_code` 必须为 `TMUA-P1` 或 `TMUA-P2`，并与 `primary_module` 对应。
+- `target_exam_scope.modules` 对 TMUA 表示 paper，必须且只能包含 `Paper 1` 或 `Paper 2` 之一；不得写 ESAT 模块。
 - `syllabus_codes`、`syllabus_items`、`knowledge_points[].code`、`topic_code` 与 `syllabus_tags` 必须来自 `tmua_syllabus.json`。
 - Paper 1 不得使用 `Logic & Proof`；Paper 2 可使用 Mathematics 1、Mathematics 2 和 Logic & Proof。
 - `source.generation_blueprint.retained_knowledge_point` 应使用 TMUA syllabus code，不使用旧自由文本标签。
@@ -59,7 +61,7 @@ TMUA 生成字段硬规则：
 
 正式输出自动补入：
 
-- `contract_version: "3.2.0"`
+- `contract_version: "3.3.0"`
 - `document_type: "generated_exam"`
 - 输入与约束共同计算的 `source_hash`
 - `validation_status: "passed"`

@@ -6,10 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 sys.dont_write_bytecode = True
-CORE_PYTHON = Path(__file__).resolve().parents[2] / "exam-paper-core" / "python"
+SUITE_ROOT = Path(__file__).resolve().parents[2]
+CORE_PYTHON = SUITE_ROOT / "exam-paper-core" / "python"
+FEATURE_FLAGS_PATH = SUITE_ROOT / "exam-paper-workflow" / "workflow-features.json"
 if str(CORE_PYTHON) not in sys.path:
     sys.path.insert(0, str(CORE_PYTHON))
 
@@ -26,6 +29,7 @@ from exam_paper_core import (  # noqa: E402
     validate_document,
     write_json_atomic,
 )
+from exam_paper_core.fingerprint import question_stem_fingerprint  # noqa: E402
 
 
 PIPELINE = "exam-paper-generator"
@@ -37,6 +41,28 @@ STAGES = [
     "independent_review",
     "export",
 ]
+GENERATION_CONSTRAINT_FIELDS = {
+    "question_count",
+    "exam_type",
+    "year",
+    "title",
+    "question_type_counts",
+    "difficulty_counts",
+    "module_counts",
+    "primary_syllabus_codes",
+    "exclude_source_question_ids",
+}
+QUESTION_TYPES = {"multiple_choice", "free_response"}
+DIFFICULTIES = {"easy", "medium", "hard", "composite"}
+
+
+def _require_generation_enabled() -> None:
+    features = read_json(FEATURE_FLAGS_PATH)
+    operations = features.get("operations") if isinstance(features, dict) else None
+    enabled = isinstance(operations, dict) and operations.get("generate") is True
+    profile = features.get("profile", "unknown") if isinstance(features, dict) else "unknown"
+    if not enabled:
+        raise ContractError(f"当前工作流配置 {profile} 已关闭生题；本轮只测试试卷解析与组卷。")
 
 
 def _state_path(workdir: Path) -> Path:
@@ -51,11 +77,7 @@ def _load_inputs(args: argparse.Namespace) -> tuple[dict, dict, str]:
     if source["validation_status"] != "passed":
         raise ContractError("输入解析结果尚未通过质量校验。")
     constraints = read_json(constraints_path)
-    if not isinstance(constraints, dict):
-        raise ContractError("约束文件必须是 JSON 对象。")
-    question_count = constraints.get("question_count")
-    if isinstance(question_count, bool) or not isinstance(question_count, int) or question_count <= 0:
-        raise ContractError("constraints.question_count 必须是正整数。")
+    _validate_generation_constraints(constraints)
     exam_type = constraints.get("exam_type")
     if exam_type is not None:
         if not isinstance(exam_type, str) or not exam_type.strip():
@@ -66,6 +88,166 @@ def _load_inputs(args: argparse.Namespace) -> tuple[dict, dict, str]:
                 f"考试类型不一致：约束为 {exam_type}，输入题库为 {source_exam_type}。"
             )
     return source, constraints, calculate_source_hash([input_path, constraints_path])
+
+
+def _validate_count_map(
+    constraints: dict,
+    field: str,
+    *,
+    question_count: int,
+    allowed_keys: set[str] | None = None,
+) -> None:
+    if field not in constraints:
+        return
+    value = constraints[field]
+    if not isinstance(value, dict) or not value:
+        raise ContractError(f"constraints.{field} 必须是非空计数对象。")
+    if not all(isinstance(key, str) and key.strip() for key in value):
+        raise ContractError(f"constraints.{field} 的键必须是非空字符串。")
+    if allowed_keys is not None and not set(value) <= allowed_keys:
+        raise ContractError(
+            f"constraints.{field} 包含不受支持的键：{sorted(set(value) - allowed_keys)}"
+        )
+    if not all(isinstance(count, int) and not isinstance(count, bool) and count > 0 for count in value.values()):
+        raise ContractError(f"constraints.{field} 的计数必须是正整数。")
+    if sum(value.values()) != question_count:
+        raise ContractError(
+            f"constraints.{field} 的计数总和必须等于 question_count={question_count}。"
+        )
+
+
+def _validate_unique_text_list(constraints: dict, field: str) -> None:
+    if field not in constraints:
+        return
+    value = constraints[field]
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(item, str) and item.strip() for item in value)
+        or len(value) != len(set(value))
+    ):
+        raise ContractError(f"constraints.{field} 必须是非空且不重复的字符串数组。")
+
+
+def _validate_generation_constraints(constraints: object) -> None:
+    if not isinstance(constraints, dict):
+        raise ContractError("约束文件必须是 JSON 对象。")
+    unknown = set(constraints) - GENERATION_CONSTRAINT_FIELDS
+    if unknown:
+        raise ContractError(f"约束文件包含未知字段：{sorted(unknown)}")
+    question_count = constraints.get("question_count")
+    if isinstance(question_count, bool) or not isinstance(question_count, int) or question_count <= 0:
+        raise ContractError("constraints.question_count 必须是正整数。")
+    for field in ("exam_type", "title"):
+        if field in constraints and (
+            not isinstance(constraints[field], str) or not constraints[field].strip()
+        ):
+            raise ContractError(f"constraints.{field} 必须是非空字符串。")
+    if "year" in constraints and (
+        isinstance(constraints["year"], bool)
+        or not isinstance(constraints["year"], (str, int))
+    ):
+        raise ContractError("constraints.year 必须是字符串或整数年份。")
+    _validate_count_map(
+        constraints,
+        "question_type_counts",
+        question_count=question_count,
+        allowed_keys=QUESTION_TYPES,
+    )
+    _validate_count_map(
+        constraints,
+        "difficulty_counts",
+        question_count=question_count,
+        allowed_keys=DIFFICULTIES,
+    )
+    _validate_count_map(
+        constraints,
+        "module_counts",
+        question_count=question_count,
+    )
+    _validate_unique_text_list(constraints, "primary_syllabus_codes")
+    _validate_unique_text_list(constraints, "exclude_source_question_ids")
+
+
+def _primary_knowledge_code(question: dict) -> str:
+    primary = [
+        point["code"]
+        for point in question["knowledge_points"]
+        if point.get("is_primary") is True
+    ]
+    if len(primary) != 1:
+        raise ContractError(f"{question.get('code', '未知题目')} 必须且只能有一个主知识点。")
+    return primary[0]
+
+
+def _validate_generated_output(source: dict, document: dict, constraints: dict) -> None:
+    questions = document["questions"]
+    source_by_code = {item["code"]: item for item in source["questions"]}
+    excluded_sources = set(constraints.get("exclude_source_question_ids", []))
+    unknown_exclusions = excluded_sources - set(source_by_code)
+    if unknown_exclusions:
+        raise ContractError(f"exclude_source_question_ids 包含不存在的母题：{sorted(unknown_exclusions)}")
+
+    source_stems = {
+        question_stem_fingerprint(item): item["code"] for item in source["questions"]
+    }
+    generated_stems: dict[str, str] = {}
+    binding_errors: list[str] = []
+    stem_collisions: list[str] = []
+    for item in questions:
+        source_info = item["source"]
+        source_id = source_info["source_question_id"]
+        source_question = source_by_code.get(source_id)
+        if source_question is None:
+            binding_errors.append(f"{item['code']} 引用了不存在的母题 {source_id}")
+            continue
+        if source_id in excluded_sources:
+            binding_errors.append(f"{item['code']} 使用了被排除的母题 {source_id}")
+        if source_info["source_fingerprint"] != source_question["fingerprint"]:
+            binding_errors.append(f"{item['code']} 的母题 ID 与 source_fingerprint 不匹配")
+        retained = source_info["generation_blueprint"]["retained_knowledge_point"]
+        source_codes = {point["code"] for point in source_question["knowledge_points"]}
+        generated_codes = {point["code"] for point in item["knowledge_points"]}
+        if retained not in source_codes or retained not in generated_codes:
+            binding_errors.append(f"{item['code']} 的 retained_knowledge_point 未同时存在于母题和新题")
+        stem = question_stem_fingerprint(item)
+        if stem in source_stems:
+            stem_collisions.append(f"{item['code']} 与母题 {source_stems[stem]} 题干相同")
+        if stem in generated_stems:
+            stem_collisions.append(f"{item['code']} 与同批题 {generated_stems[stem]} 题干相同")
+        generated_stems[stem] = item["code"]
+    if binding_errors:
+        raise ContractError("生成题母题绑定失败：" + "；".join(binding_errors))
+    if stem_collisions:
+        raise ContractError("生成题题干近重复：" + "；".join(stem_collisions))
+
+    expected_count = constraints["question_count"]
+    count_specs = {
+        "question_type_counts": Counter(item["question_type"] for item in questions),
+        "difficulty_counts": Counter(item["difficulty"] for item in questions),
+        "module_counts": Counter(item["subject"] for item in questions),
+    }
+    for field, actual in count_specs.items():
+        if field in constraints and dict(actual) != constraints[field]:
+            raise ContractError(
+                f"生成结果不满足 constraints.{field}：期望 {constraints[field]}，实际 {dict(actual)}。"
+            )
+    allowed_primary = set(constraints.get("primary_syllabus_codes", []))
+    if allowed_primary:
+        invalid = [
+            item["code"]
+            for item in questions
+            if _primary_knowledge_code(item) not in allowed_primary
+        ]
+        if invalid:
+            raise ContractError(f"生成题主知识点超出 primary_syllabus_codes：{invalid}")
+    metadata = document["metadata"]
+    if "year" in constraints and str(metadata["year"]) != str(constraints["year"]):
+        raise ContractError("生成结果 metadata.year 不满足 constraints.year。")
+    if "title" in constraints and metadata.get("title") != constraints["title"]:
+        raise ContractError("生成结果 metadata.title 不满足 constraints.title。")
+    if len(questions) != expected_count:
+        raise ContractError(f"生成题目数不符：期望 {expected_count}，实际 {len(questions)}。")
 
 
 def _open_state(args: argparse.Namespace) -> tuple[PipelineState, dict, dict]:
@@ -145,6 +327,12 @@ def command_finalize(args: argparse.Namespace) -> None:
         )
     draft = read_json(Path(args.draft))
     _validate_question_transactions(state, draft)
+    metadata = draft.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ContractError("生成草稿必须包含 metadata 对象。")
+    if metadata.get("paper_type") not in {None, "aiPaper"}:
+        raise ContractError("AI 生成试卷的 metadata.paper_type 必须是 aiPaper。")
+    metadata["paper_type"] = "aiPaper"
     document = build_document(
         draft,
         document_type="generated_exam",
@@ -152,26 +340,12 @@ def command_finalize(args: argparse.Namespace) -> None:
         validation_status="passed",
     )
     expected_count = constraints["question_count"]
-    if len(document["questions"]) != expected_count:
-        raise ContractError(
-            f"生成题目数不符：期望 {expected_count}，实际 {len(document['questions'])}。"
-        )
+    _validate_generated_output(source, document, constraints)
     source_exam_type = source["metadata"]["exam_type"]
     if document["metadata"]["exam_type"] != source_exam_type:
         raise ContractError(
             "生成结果的 metadata.exam_type 必须与输入题库一致："
             f"{source_exam_type}。"
-        )
-    source_question_codes = {item["code"] for item in source["questions"]}
-    unknown_references: list[str] = []
-    for item in document["questions"]:
-        source_question_id = item["source"]["source_question_id"]
-        if source_question_id not in source_question_codes:
-            unknown_references.append(f"{item['code']}→{source_question_id}")
-    if unknown_references:
-        raise ContractError(
-            "生成题引用了输入题库中不存在的 code："
-            + "、".join(unknown_references)
         )
     source_fingerprints = {item["fingerprint"] for item in source["questions"]}
     collisions = [
@@ -281,6 +455,8 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        if args.command != "preflight":
+            _require_generation_enabled()
         args.handler(args)
         return 0
     except (ContractError, OSError, ValueError, json.JSONDecodeError) as exc:

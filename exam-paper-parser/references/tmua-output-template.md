@@ -8,6 +8,7 @@
 {
   "metadata": {
     "exam_type": "TMUA",
+    "paper_type": "realPaper",
     "year": 2023,
     "source_files": ["TMUA_2023_Paper_1.pdf", "TMUA_2023_AnswerKey.pdf"],
     "target_exam": "TMUA",
@@ -80,11 +81,9 @@
   "diagram": null,
   "target_exam_scope": {
     "target_exam": "TMUA",
-    "status": "in_scope",
+    "scope_status": "in_scope",
+    "mapping_status": "human_verified",
     "modules": ["Paper 1"],
-    "primary_module": "Paper 1",
-    "primary_module_code": "TMUA-P1",
-    "primary_module_label": "Paper 1: Mathematical Thinking",
     "syllabus_codes": ["214015"],
     "syllabus_items": [
       {
@@ -103,10 +102,7 @@
           "Equations and simultaneous equations (方程与联立方程)"
         ]
       }
-    ],
-    "exclusion_reasons": [],
-    "evidence": "本题是代数方程选择题，属于 TMUA Paper 1 Mathematical Thinking 的 Mathematics 1 范围。",
-    "review_status": "reviewed"
+    ]
   },
   "source": {
     "question": {"file": "TMUA_2023_Paper_1.pdf", "page": 1},
@@ -122,11 +118,9 @@
 ```json
 "target_exam_scope": {
   "target_exam": "TMUA",
-  "status": "in_scope",
+  "scope_status": "in_scope",
+  "mapping_status": "human_verified",
   "modules": ["Paper 2"],
-  "primary_module": "Paper 2",
-  "primary_module_code": "TMUA-P2",
-  "primary_module_label": "Paper 2: Mathematical Reasoning",
   "syllabus_codes": ["231001"],
   "syllabus_items": [
     {
@@ -145,17 +139,14 @@
         "Mathematical logic basics (数学逻辑基础)"
       ]
     }
-  ],
-  "exclusion_reasons": [],
-  "evidence": "本题要求判断数学论证结构，属于 TMUA Paper 2 Mathematical Reasoning 的 Logic & Proof 范围。",
-  "review_status": "reviewed"
+  ]
 }
 ```
 
 ## 强制检查
 
 - `target_exam_scope.modules` 对 TMUA 表示 paper；只允许 `Paper 1`、`Paper 2`。
-- `primary_module_code` 只允许 `TMUA-P1`、`TMUA-P2`，并必须与 `primary_module` 对应。
+- 每题的 `target_exam_scope.modules` 必须且只能包含一个 paper。
 - `syllabus_codes[]`、`knowledge_points[].code`、`topic_code` 与 `syllabus_tags[]` 必须来自 `tmua_syllabus.json`。
 - `syllabus_items[]` 必须与 `tmua_syllabus.json` 中的 code/label/module/parent/path 完全一致。
 - Paper 1 不使用 `Logic & Proof`；Paper 2 可使用 `Mathematics 1`、`Mathematics 2`、`Logic & Proof`。

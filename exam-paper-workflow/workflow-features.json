@@ -1,0 +1,8 @@
+{
+  "profile": "parse_assemble_test",
+  "operations": {
+    "parse": true,
+    "generate": false,
+    "assemble-year": true
+  }
+}

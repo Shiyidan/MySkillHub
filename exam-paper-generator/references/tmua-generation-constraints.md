@@ -5,16 +5,9 @@
 ## 考试结构
 
 - TMUA 生成题只使用 `multiple_choice`。
-- Paper 1 写作 `Paper 1: Mathematical Thinking`，字段：
-  - `target_exam_scope.modules`: `["Paper 1"]`
-  - `primary_module`: `"Paper 1"`
-  - `primary_module_code`: `"TMUA-P1"`
-  - `primary_module_label`: `"Paper 1: Mathematical Thinking"`
-- Paper 2 写作 `Paper 2: Mathematical Reasoning`，字段：
-  - `target_exam_scope.modules`: `["Paper 2"]`
-  - `primary_module`: `"Paper 2"`
-  - `primary_module_code`: `"TMUA-P2"`
-  - `primary_module_label`: `"Paper 2: Mathematical Reasoning"`
+- Paper 1 写作 `Paper 1: Mathematical Thinking`，`target_exam_scope.modules` 固定为 `["Paper 1"]`。
+- Paper 2 写作 `Paper 2: Mathematical Reasoning`，`target_exam_scope.modules` 固定为 `["Paper 2"]`。
+- 每题只允许归属一个 paper，不再重复维护 primary module、code 或 label。
 
 ## 考纲映射
 

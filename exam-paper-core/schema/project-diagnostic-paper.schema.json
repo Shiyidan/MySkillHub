@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.codex/exam-paper-core/schema/project-diagnostic-paper.schema.json",
   "title": "QuizTestDemo ESAT Legacy Diagnostic Paper",
-  "description": "由内部 assembled_exam 导出的单套自包含 ESAT legacy 诊断卷，可直接提交到 /api/papers/import-json。",
+  "description": "由内部 assembled_exam 导出的按模块分组、自包含的 ESAT legacy 真题诊断卷。",
   "type": "object",
   "additionalProperties": false,
   "required": ["code", "metadata", "questions"],
@@ -17,7 +17,7 @@
         "year": {"type": "integer"},
         "duration": {"type": "integer", "minimum": 1},
         "examType": {"const": "ESAT"},
-        "paperType": {"const": "mockPaper"},
+        "paperType": {"const": "realPaper"},
         "totalQuestions": {"type": "integer", "minimum": 1},
         "remarks": {"type": "string", "minLength": 1}
       }
@@ -25,7 +25,7 @@
     "questions": {
       "type": "array",
       "minItems": 1,
-      "items": {"$ref": "#/$defs/question"}
+      "items": {"$ref": "#/$defs/module_group"}
     }
   },
   "$defs": {
@@ -107,6 +107,17 @@
         "review_guidance": {"type": "string", "minLength": 1}
       }
     },
+    "module_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject", "subject_code", "duration", "items"],
+      "properties": {
+        "subject": {"type": "string", "minLength": 1},
+        "subject_code": {"type": "string", "minLength": 1},
+        "duration": {"const": 40},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/question"}}
+      }
+    },
     "question": {
       "type": "object",
       "additionalProperties": false,
@@ -121,15 +132,12 @@
         "examType",
         "source_examType",
         "year",
-        "subject",
-        "subject_code",
         "topic",
         "topic_code",
         "question_type",
         "difficulty",
         "syllabus_points",
         "knowledge_points",
-        "is_ai_generated",
         "learning_analysis"
       ],
       "properties": {
@@ -143,17 +151,25 @@
         "examType": {"const": "ESAT"},
         "source_examType": {"enum": ["ENGAA", "NSAA"]},
         "year": {"type": "integer"},
-        "subject": {"type": "string", "minLength": 1},
-        "subject_code": {"type": "string", "minLength": 1},
         "topic": {"type": "string", "minLength": 1},
         "topic_code": {"type": "string", "minLength": 1},
         "question_type": {"enum": ["single_choice", "multiple_choice", "short_answer"]},
-        "difficulty": {"enum": ["easy", "medium", "hard"]},
+        "difficulty": {"enum": ["easy", "medium", "hard", "composite"]},
         "syllabus_points": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point"}},
         "knowledge_points": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point"}},
-        "is_ai_generated": {"const": false},
         "learning_analysis": {"$ref": "#/$defs/learning_analysis"}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"difficulty": {"const": "composite"}},
+            "required": ["difficulty"]
+          },
+          "then": {
+            "properties": {"knowledge_points": {"minItems": 2}}
+          }
+        }
+      ]
     }
   }
 }
