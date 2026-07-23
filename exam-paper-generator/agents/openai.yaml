@@ -1,4 +1,0 @@
-interface:
-  display_name: "英文试卷生成"
-  short_description: "基于已解析真题按约束生成新题，并输出中文解析与质量报告"
-  default_prompt: "先检查 workflow-features.json；仅当 operations.generate=true 时，使用 $exam-paper-generator 基于已校验解析结果生成 metadata.paper_type=aiPaper 的新试卷。"
