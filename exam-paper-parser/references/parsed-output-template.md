@@ -28,7 +28,7 @@
   "number": 1,
   "title": [
     {"type": "text", "content": "If "},
-    {"type": "latex", "content": "x + 2 = 5"},
+    {"type": "latex", "content": "x + 2 = 5", "mode": "inline"},
     {"type": "text", "content": ", what is x?"}
   ],
   "options": [
@@ -175,5 +175,6 @@
 
 - `knowledge_points[].code`、`syllabus_tags[]`、`topic_code`、`target_exam_scope.syllabus_codes[]` 对 ESAT 题目应统一使用 `esat_syllabus.json` 中存在的 6 位数字代码。
 - `title` 和 `options[].content` 必须保留英文原题；中文只进入解析和学习分析字段。
+- 行内公式必须设置 `"mode": "inline"`；独立公式必须设置 `"mode": "block"` 和 `"align"`。完整恢复规则见 `references/content-layout.md`。
 - 选择题必须逐一解释所有错误选项，不能只解释主要干扰项。
 - 图形题必须同时保留 `image_ref`、`images[]`、`diagram` 或说明 `diagram=null` 的理由；已恢复图形必须有非空 `asset_path`。

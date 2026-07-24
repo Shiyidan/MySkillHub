@@ -15,7 +15,7 @@
     "questions"
   ],
   "properties": {
-    "contract_version": {"const": "3.3.0"},
+    "contract_version": {"const": "3.4.0"},
     "document_type": {"enum": ["parsed_exam", "generated_exam", "assembled_exam"]},
     "source_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "validation_status": {"enum": ["draft", "passed", "failed"]},
@@ -185,9 +185,32 @@
           "additionalProperties": false,
           "required": ["type", "content"],
           "properties": {
-            "type": {"enum": ["text", "latex"]},
-            "content": {"type": "string", "minLength": 1}
+            "type": {"const": "text"},
+            "content": {"type": "string", "minLength": 1},
+            "break_before": {"type": "boolean"}
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "content", "mode"],
+          "properties": {
+            "type": {"const": "latex"},
+            "content": {"type": "string", "minLength": 1},
+            "mode": {"enum": ["inline", "block"]},
+            "align": {"enum": ["left", "center", "right"]},
+            "break_before": {"type": "boolean"}
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"mode": {"const": "block"}},
+                "required": ["mode"]
+              },
+              "then": {"required": ["align"]},
+              "else": {"not": {"required": ["align"]}}
+            }
+          ]
         },
         {
           "type": "object",

@@ -1,7 +1,8 @@
 """考试题干的通用内容块重建。
 
-解析层可将题干保留为 text/latex/image_ref 片段；本模块按稳定规则
-重建段落，供 ESAT、TMUA 等考试共同使用。考试专属版式判断不放在这里。
+解析层将题干保留为 text/latex/image_ref 片段，并显式标记行内数学、
+独立数学、段落边界和独立块对齐方式。本模块只执行确定性重建，供
+ESAT、TMUA 等考试共同使用。
 """
 from __future__ import annotations
 
@@ -21,11 +22,26 @@ def normalize_math_text(text: str) -> str:
     return value
 
 
-def from_structured_parts(parts: list[dict]) -> list[dict]:
-    """将题干结构化片段转换为 paragraph/image_ref 内容块。
+def inline_latex(content: str) -> str:
+    value = str(content).strip()
+    if not value:
+        raise ValueError("inline latex content cannot be empty")
+    return "\\(" + value + "\\)"
 
-    独立公式（latex）单独成为段落；相邻普通文本合并为一个段落。
-    这是确定性排版转换，不在最终导出阶段拼接整道题干。
+
+def block_latex(content: str) -> str:
+    value = str(content).strip()
+    if not value:
+        raise ValueError("block latex content cannot be empty")
+    return "\\[" + value + "\\]"
+
+
+def from_structured_parts(parts: list[dict]) -> list[dict]:
+    """将 canonical 结构化片段转换为项目 paragraph/image_ref 内容块。
+
+    inline latex 与相邻文本合并到同一段；block latex 独立成段并保留
+    align。只有显式 break_before、空行、block latex 和 image_ref 会
+    结束当前文本段落。
     """
     if not isinstance(parts, list):
         raise TypeError("structured title parts must be a list")
@@ -56,10 +72,28 @@ def from_structured_parts(parts: list[dict]) -> list[dict]:
                 if segment.strip():
                     text_parts.append(segment.replace("\n", " "))
         elif kind == "latex":
-            flush()
             content = str(part.get("content", "")).strip()
-            if content:
-                blocks.append({"type": "paragraph", "text": "\\(" + content + "\\)"})
+            mode = part.get("mode")
+            if mode == "inline":
+                if part.get("break_before"):
+                    flush()
+                if content:
+                    text_parts.append(inline_latex(content))
+            elif mode == "block":
+                flush()
+                align = part.get("align")
+                if align not in {"left", "center", "right"}:
+                    raise ValueError("block latex must declare left, center, or right alignment")
+                if content:
+                    blocks.append(
+                        {
+                            "type": "paragraph",
+                            "text": block_latex(content),
+                            "align": align,
+                        }
+                    )
+            else:
+                raise ValueError("latex content must declare mode as inline or block")
         elif kind == "image_ref":
             block = {"type": "image_ref", "image_id": part["image_id"]}
             if part.get("alt"):

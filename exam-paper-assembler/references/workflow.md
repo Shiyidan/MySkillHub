@@ -102,27 +102,26 @@ ESAT 组合卷以 Mathematics 1 为必选，再从四个进一步模块中选两
 
 最终交付必须是六个独立的项目 JSON。每个文件必须包含：
 
-- 根字段 `code`、`metadata`、`questions`。
-- `metadata.paperName/year/duration/examType/paperType/totalQuestions/remarks`。
-- `metadata.paperType=realPaper`。
-- `questions[0..2]` 是三个模块对象，每个模块只包含 `subject`、`subject_code`、`duration`、`items`。
-- 三个模块按组合顺序排列，每个模块的 `items[].number` 独立从 1 连续编号。
-- 字符串 `title`，且等于首个 `content_blocks` paragraph。
+- 根字段 `metadata`、`sections`。
+- `metadata.code/title/examType/year/paperType/assemblyType/deliveryMode/remarks`。
+- `metadata.paperType=realPaper`、`assemblyType=legacy_equivalent`、`deliveryMode=section_sequence`。
+- `sections[0..2]` 是三个科目段，每段只包含 `code/sectionType/order/questions`；时间、休息和跳转由项目端配置。
+- 三个科目段按组合顺序排列，每段的 `questions[].number` 独立从 1 连续编号。
+- 字符串 `title`，且等于首个 `contentBlocks` paragraph。
 - 数组 `answer`，项目题型枚举和当前考纲字段。
 - 自包含 SVG 或 data URI 位图，不引用本机文件路径。
-- 相同来源题在不同卷中使用相同 `questions[].items[].code`。
+- 相同来源题在不同卷中使用相同 `sections[].questions[].code`。
 
 项目导出时进行以下确定性转换：
 
-- canonical `title` 内容块转换为项目 `title + content_blocks`。
+- canonical `title` 内容块转换为项目 `title + contentBlocks`。
 - canonical 标量答案转换为项目答案数组。
 - canonical `multiple_choice/free_response` 转换为项目 `single_choice/multiple_choice/short_answer`。
-- canonical 知识点和考纲项转换为项目 `knowledge_points/syllabus_points`。
-- canonical `correct_solution` 转换为项目 `learning_analysis.solution`。
-- canonical 单题 `subject/subject_code` 上移到模块对象，最终单题不再重复输出。
+- canonical 学科、章节和知识点转换为项目 `classification`。
+- canonical 来源信息转换为项目 `source`。
+- canonical 学习解析转换为项目 `learningAnalysis`。
 - canonical 单题 `is_ai_generated` 不进入最终项目 JSON，试卷来源统一由 `metadata.paperType` 表达。
 
 内部 coverage、module_note、来源 evidence 和 fingerprint 不进入项目 JSON；它们仍保留在 canonical 或分析产物中。最终 `metadata.remarks` 只汇总每模块实际/目标题量、覆盖警告和 `diagnostic_confidence`，不复制整套内部分析结构。
 
 最终字段模板见 `references/output-template.md`，正式 Schema 为 `../exam-paper-core/schema/project-diagnostic-paper.schema.json`。
-当前 QuizTestDemo 导入器仍使用旧的扁平 `questions` 契约；项目端完成模块分组适配后才能直接导入新版 JSON。

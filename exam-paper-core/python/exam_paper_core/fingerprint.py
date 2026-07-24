@@ -9,6 +9,23 @@ import unicodedata
 from typing import Any
 
 
+LAYOUT_ONLY_KEYS = {"mode", "align", "break_before"}
+
+
+def _without_layout_metadata(value: Any) -> Any:
+    """Remove rendering metadata from title/option identity payloads."""
+
+    if isinstance(value, list):
+        return [_without_layout_metadata(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _without_layout_metadata(item)
+            for key, item in value.items()
+            if key not in LAYOUT_ONLY_KEYS
+        }
+    return value
+
+
 def normalize_fingerprint_value(value: Any) -> Any:
     """统一规范化指纹比较中的 Unicode、空白和大小写。"""
 
@@ -48,8 +65,8 @@ def question_fingerprint(question: dict[str, Any]) -> str:
 
     diagram = question.get("diagram")
     payload = {
-        "title": question.get("title", []),
-        "options": question.get("options", []),
+        "title": _without_layout_metadata(question.get("title", [])),
+        "options": _without_layout_metadata(question.get("options", [])),
         "diagram_semantics": diagram.get("semantics") if isinstance(diagram, dict) else None,
     }
     return fingerprint_payload(payload)
@@ -60,7 +77,7 @@ def question_stem_fingerprint(question: dict[str, Any]) -> str:
 
     diagram = question.get("diagram")
     payload = {
-        "title": question.get("title", []),
+        "title": _without_layout_metadata(question.get("title", [])),
         "diagram_semantics": diagram.get("semantics") if isinstance(diagram, dict) else None,
     }
     return fingerprint_payload(payload)

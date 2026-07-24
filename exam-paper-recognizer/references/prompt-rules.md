@@ -25,10 +25,12 @@
 
 - 保留英文原文，不要改写题干和选项。
 - 只在影响阅读或公式布局时保留段落分隔和强制换行。
+- PDF 的自动折行、OCR token 边界和字体切换不是段落边界。句内变量即使单独识别为 LaTeX，也必须与前后文字保留在同一个 paragraph 中，例如 `where $a$ is a real constant.`。
 - 不要把普通英文散文包进 LaTeX 命令。
 - 默认用 `$...$` 表示行内公式或独立公式，除非目标项目要求其他格式。
 - 兼容字段 `title` 和 `options[].text` 也必须使用 Markdown + LaTeX。不要只在 `content_blocks[].formula` 中保存正确公式，否则旧渲染链路仍会显示错误。
 - 对源题中独立居中的公式，`title` 中使用空行 + `$$...$$` + 空行保留版式，例如：`Given that\n\n$$...$$\n\nwhat is ...?`。
+- 原卷中连续的多行独立公式必须逐行保存，不得用 `\qquad` 拼成一行，也不得只为减少块数量而合并为一个 `aligned` 公式。
 - 根号、分式、上标、下标和希腊字母必须使用 LaTeX：`\\sqrt{}`、`\\frac{}{}`、`^{}`、`_{}`、`\\pi`。不要输出 `?`、`sqrt( )`、`^2` 或普通 `/` 分式作为最终展示文本。
 - 在占位符模式下，单位建议写成 `[[BS]]mathrm{}`。
 
@@ -186,6 +188,7 @@ validate with scripts/validate_question_json.py <json> --max-question 10
 - 只有题目确实依赖图片、图表、表格或示意图时，才添加图片资产。
 - 如果图片或图表位于题干中间，必须生成 `content_blocks` 来保存原始顺序，例如：段落、段落、`image_ref`、段落。不要只把图片放入 `images` 数组末尾。
 - `title` 保持向旧项目兼容的展示题干；必须保留段落换行，并用 Markdown + LaTeX 表示数学公式。精确版面顺序以 `content_blocks` 为准。
+- `content_blocks` 中的独立公式必须保留源公式行数和对齐方式；项目格式支持时写入 `align: "left" | "center" | "right"`，居中依据是公式相对正文内容栏的位置。
 - `content_blocks[].image_ref.image_id` 必须对应 `images[].id`，或在没有 `id` 时对应可稳定匹配的 `images[].alt`。
 - 简单图优先使用 `diagram_spec` + SVG。
 - 每个抽取出的图都应保留原始裁剪图作为 fallback。

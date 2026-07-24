@@ -24,16 +24,17 @@ description: 将英文考试的试题 PDF、图片、官方答案或评分方案
 ## 必须遵守
 
 1. 开始任务时完整阅读 `references/workflow.md`。
-2. 解析前必须完成试卷类型确认、来源盘点、同卷材料配对和证据包制作；不得凭空补写缺失题干、答案或图形。
-3. 每道题必须建立逐题生产事务：证据充分性确认、题面结构恢复、考纲映射、独立求解、官方答案对齐、解题轨迹、学习分析、图形复原、题内微验证、原子提交。
-4. 独立求解必须先于官方答案对齐。官方材料只能用于比对和纠偏，不能替代推理过程。
-5. 解析 ESAT legacy 真题时，同一年 ENGAA 与 NSAA 必须进入同一个年度 JSON，并为每题写入 3.3.0 `target_exam_scope`；唯一归属科目使用标准化 `subject/subject_code`，范围映射使用 `scope_status`、`mapping_status` 和 `syllabus_items`。
-6. 解析 TMUA 真题时必须读取 `references/tmua-output-template.md` 和 `../exam-paper-core/syllabus/tmua_syllabus.json`：每题必须标明 Paper 1/2、`TMUA-P1/TMUA-P2`、TMUA syllabus code/path、选择题属性和中文解析；不得套用 ESAT 模块。
-7. 中文解析必须从 `solution_trace` 生成，包含“目标”“步骤 1/STEP 1”“复核”，并逐一解释所有错误选项。
-8. 图形题同时阅读 `references/visual-restoration.md`，优先保留可编辑矢量信息和可复验 bbox。
-9. 输出草稿前阅读 `references/output-contract.md`；最终输出必须通过共享契约校验和逐题事务校验。
-10. 同时上传多套题卷时必须跨来源检测重复题：题干、选项、正确答案和考纲归属一致才允许自动合并；同题干但选项不同必须保留待复核；答案或考纲归属冲突必须阻止导出。被合并题的两个来源都写入去重审计报告。
-11. 只执行解析流程，不调用生成新题流程；按 ESAT 模块组合拆卷交给 `exam-paper-assembler`。
+2. 所有考试的题面恢复都必须读取并遵守 `references/content-layout.md`。行内公式不得拆段，独立公式必须逐行保存并声明对齐方式；TMUA、ESAT、ENGAA、NSAA 和 STEP 共用同一规则。
+3. 解析前必须完成试卷类型确认、来源盘点、同卷材料配对和证据包制作；不得凭空补写缺失题干、答案或图形。
+4. 每道题必须建立逐题生产事务：证据充分性确认、题面结构恢复、考纲映射、独立求解、官方答案对齐、解题轨迹、学习分析、图形复原、题内微验证、原子提交。
+5. 独立求解必须先于官方答案对齐。官方材料只能用于比对和纠偏，不能替代推理过程。
+6. 解析 ESAT legacy 真题时，同一年 ENGAA 与 NSAA 必须进入同一个年度 JSON，并为每题写入 3.4.0 `target_exam_scope`；唯一归属科目使用标准化 `subject/subject_code`，范围映射使用 `scope_status`、`mapping_status` 和 `syllabus_items`。
+7. 解析 TMUA 真题时必须读取 `references/tmua-output-template.md`、`references/tmua-final-import.md` 和 `../exam-paper-core/syllabus/tmua_syllabus.json`：每题必须标明 Paper 1/2、`TMUA-P1/TMUA-P2`、TMUA syllabus code/path、选择题属性和中文解析；不得套用 ESAT 模块。
+8. 中文解析必须从 `solution_trace` 生成，包含“目标”“步骤 1/STEP 1”“复核”，并逐一解释所有错误选项。
+9. 图形题同时阅读 `references/visual-restoration.md`，优先保留可编辑矢量信息和可复验 bbox。
+10. 输出草稿前阅读 `references/output-contract.md`；最终输出必须通过共享契约校验和逐题事务校验。
+11. 同时上传多套题卷时必须跨来源检测重复题：题干、选项、正确答案和考纲归属一致才允许自动合并；同题干但选项不同必须保留待复核；答案或考纲归属冲突必须阻止导出。被合并题的两个来源都写入去重审计报告。
+12. 只执行解析流程，不调用生成新题流程；按 ESAT 模块组合拆卷交给 `exam-paper-assembler`。
 
 ## 标准流程
 
@@ -72,9 +73,11 @@ python ../exam-paper-core/scripts/question_transaction.py rollback --transaction
 ## 资源按需加载
 
 - `references/workflow.md`：始终读取，包含阶段门禁、返工规则和交付标准。
+- `references/content-layout.md`：始终读取，定义所有考试共用的行内公式、独立公式、段落边界和对齐语义。
 - `references/output-contract.md`：制作或修订 JSON 时读取。
-- `references/parsed-output-template.md`：需要核对 3.3.0 字段、ESAT scope、out_of_scope/partially_in_scope 或图形字段时读取。
+- `references/parsed-output-template.md`：需要核对 3.4.0 字段、ESAT scope、out_of_scope/partially_in_scope 或图形字段时读取。
 - `references/tmua-output-template.md`：解析 TMUA 或审计 TMUA JSON 字段时读取。
+- `references/tmua-final-import.md`：导出 TMUA 项目 JSON 时读取。
 - `references/explanation-prompt.md`：撰写中文解析时读取。
 - `references/visual-restoration.md`：题目含图、表、坐标系或几何示意时读取。
 - `../exam-paper-core/syllabus/*.json`：仅加载当前考试对应考纲。

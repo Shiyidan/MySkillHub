@@ -78,16 +78,26 @@ class ProjectExportTest(unittest.TestCase):
                         "code": "ENGAA_2023_S1_Q06",
                         "title": [
                             {"type": "text", "content": "A force "},
-                            {"type": "latex", "content": "F"},
+                            {"type": "latex", "content": "F", "mode": "inline"},
                             {"type": "text", "content": " acts."},
                             {"type": "image_ref", "image_id": "q6-graph"},
                             {"type": "text", "content": "What is F?"},
                         ],
                         "options": [
                             {"label": "A", "content": [{"type": "text", "content": "1 N"}]},
-                            {"label": "B", "content": [{"type": "latex", "content": "2\\,\\mathrm{N}"}]},
+                            {
+                                "label": "B",
+                                "content": [
+                                    {
+                                        "type": "latex",
+                                        "content": "2\\,\\mathrm{N}",
+                                        "mode": "inline",
+                                    }
+                                ],
+                            },
                         ],
                         "answer": "B",
+                        "questionNumber": 6,
                         "images": [
                             {
                                 "image_id": "q6-graph",
@@ -120,6 +130,7 @@ class ProjectExportTest(unittest.TestCase):
                         "learning_analysis": {
                             "exam_focus": "考查力与能量关系。",
                             "correct_solution": "根据题目条件计算并选择 B。",
+                            "common_error_causes": ["误读图像关系。"],
                             "review_guidance": "复习力、功和能量关系。",
                         },
                         "assembled_section": {
@@ -137,33 +148,46 @@ class ProjectExportTest(unittest.TestCase):
             )
 
         self.assertEqual(result["metadata"]["paperType"], "realPaper")
-        self.assertEqual(result["metadata"]["duration"], 120)
-        self.assertEqual(result["metadata"]["totalQuestions"], 1)
-        self.assertEqual(sum(len(group["items"]) for group in result["questions"]), 1)
+        self.assertEqual(result["metadata"]["deliveryMode"], "section_sequence")
+        self.assertEqual(result["metadata"]["assemblyType"], "legacy_equivalent")
+        self.assertEqual(sum(len(section["questions"]) for section in result["sections"]), 1)
         self.assertIn("Physics：实际 1/27 题", result["metadata"]["remarks"])
         self.assertIn("题量不足 26 题", result["metadata"]["remarks"])
         self.assertIn("考纲覆盖偏窄", result["metadata"]["remarks"])
         self.assertIn("诊断可信度低", result["metadata"]["remarks"])
-        self.assertEqual(len(result["questions"]), 3)
+        self.assertEqual(len(result["sections"]), 3)
         self.assertEqual(
-            [group["subject"] for group in result["questions"]],
-            ["Mathematics 1", "Biology", "Physics"],
+            [section["code"] for section in result["sections"]],
+            ["maths1", "biology", "physics"],
         )
-        self.assertEqual(result["questions"][2]["duration"], 40)
-        question = result["questions"][2]["items"][0]
+        self.assertEqual(result["sections"][2]["sectionType"], "subject")
+        self.assertEqual(
+            set(result["sections"][2]),
+            {"code", "sectionType", "order", "questions"},
+        )
+        question = result["sections"][2]["questions"][0]
         self.assertEqual(question["number"], 1)
         self.assertEqual(question["answer"], ["B"])
         self.assertEqual(question["title"], "A force \\(F\\) acts.")
-        self.assertEqual(question["content_blocks"][1], {"type": "image_ref", "image_id": "q6-graph"})
-        self.assertEqual(question["syllabus_points"][0]["role"], "primary")
+        self.assertEqual(question["contentBlocks"][1], {"type": "image_ref", "image_id": "q6-graph"})
+        self.assertEqual(question["classification"]["knowledgePoints"][0]["role"], "primary")
+        self.assertEqual(question["source"]["sectionCode"], "physics")
         self.assertIn("<svg", question["images"][0]["svg"])
         self.assertTrue(question["images"][1]["src"].startswith("data:image/png;base64,"))
-        self.assertNotIn("subject", question)
+        self.assertNotIn("examType", question)
         self.assertNotIn("subject_code", question)
         self.assertNotIn("is_ai_generated", question)
 
         invalid = copy.deepcopy(result)
-        invalid["metadata"]["paperType"] = "mockPaper"
+        invalid["metadata"]["deliveryMode"] = "module_sequence"
+        with self.assertRaises(ContractError):
+            validate_project_diagnostic_paper(invalid)
+
+        invalid = copy.deepcopy(result)
+        invalid["sections"][2]["questions"][0]["contentBlocks"].insert(
+            1,
+            {"type": "paragraph", "text": ","},
+        )
         with self.assertRaises(ContractError):
             validate_project_diagnostic_paper(invalid)
 

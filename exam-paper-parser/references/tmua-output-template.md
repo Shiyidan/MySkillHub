@@ -27,7 +27,7 @@
   "number": 1,
   "title": [
     {"type": "text", "content": "If "},
-    {"type": "latex", "content": "x + 2 = 5"},
+    {"type": "latex", "content": "x + 2 = 5", "mode": "inline"},
     {"type": "text", "content": ", what is x?"}
   ],
   "options": [
@@ -152,3 +152,4 @@
 - Paper 1 不使用 `Logic & Proof`；Paper 2 可使用 `Mathematics 1`、`Mathematics 2`、`Logic & Proof`。
 - `question_type` 必须是 `multiple_choice`；错误选项必须逐一解释。
 - 题干和选项保持英文；中文只进入解析、学习分析、证据说明和复核记录。
+- 题面结构遵守 `references/content-layout.md`：句内变量不得拆段，独立公式逐行保存并保留对齐方式。

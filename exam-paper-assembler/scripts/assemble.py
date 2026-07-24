@@ -97,6 +97,13 @@ def _expected_year_packages(year: int) -> dict[str, tuple[str, ...]]:
 def _validate_year_project_package(package_dir: Path, year: int) -> list[str]:
     """Validate all six project papers as one publishable annual package."""
 
+    section_codes = {
+        "Mathematics 1": "maths1",
+        "Mathematics 2": "maths2",
+        "Physics": "physics",
+        "Chemistry": "chemistry",
+        "Biology": "biology",
+    }
     expected = _expected_year_packages(year)
     actual = {path.name for path in package_dir.iterdir() if path.is_file()}
     if actual != set(expected):
@@ -110,30 +117,33 @@ def _validate_year_project_package(package_dir: Path, year: int) -> list[str]:
         paper = read_json(package_dir / filename)
         validate_project_diagnostic_paper(paper)
         expected_code = filename.removesuffix(".json")
-        if paper.get("code") != expected_code:
-            raise ContractError(f"{filename} 的 code 必须是 {expected_code}。")
         metadata = paper.get("metadata", {})
+        if metadata.get("code") != expected_code:
+            raise ContractError(f"{filename} 的 metadata.code 必须是 {expected_code}。")
         if metadata.get("year") != year:
             raise ContractError(f"{filename} 的年份与年度题库不一致。")
-        if metadata.get("duration") != 120:
-            raise ContractError(f"{filename} 的整卷时长必须固定为 120 分钟。")
+        if metadata.get("examType") != "ESAT":
+            raise ContractError(f"{filename} 的 metadata.examType 必须是 ESAT。")
+        if metadata.get("assemblyType") != "legacy_equivalent":
+            raise ContractError(f"{filename} 的 metadata.assemblyType 必须是 legacy_equivalent。")
+        if metadata.get("deliveryMode") != "section_sequence":
+            raise ContractError(f"{filename} 的 metadata.deliveryMode 必须是 section_sequence。")
 
-        groups = paper.get("questions", [])
-        actual_modules = tuple(group.get("subject") for group in groups if isinstance(group, dict))
-        if actual_modules != expected_modules:
+        sections = paper.get("sections", [])
+        actual_section_codes = tuple(section.get("code") for section in sections if isinstance(section, dict))
+        expected_section_codes = tuple(section_codes[module] for module in expected_modules)
+        if actual_section_codes != expected_section_codes:
             raise ContractError(
-                f"{filename} 的模块组合应为 {list(expected_modules)}，实际为 {list(actual_modules)}。"
+                f"{filename} 的 section code 组合应为 {list(expected_section_codes)}，实际为 {list(actual_section_codes)}。"
             )
 
         paper_codes: set[str] = set()
-        total_questions = 0
-        for group in groups:
-            module = group["subject"]
-            if group.get("duration") != 40:
-                raise ContractError(f"{filename} 的 {module} 模块时长必须固定为 40 分钟。")
-            items = group.get("items", [])
-            codes = tuple(item.get("code") for item in items if isinstance(item, dict))
-            if len(codes) != len(items) or any(not isinstance(code, str) or not code for code in codes):
+        for module, section in zip(expected_modules, sections):
+            if section.get("sectionType") != "subject":
+                raise ContractError(f"{filename} 的 {module} sectionType 必须是 subject。")
+            questions = section.get("questions", [])
+            codes = tuple(item.get("code") for item in questions if isinstance(item, dict))
+            if len(codes) != len(questions) or any(not isinstance(code, str) or not code for code in codes):
                 raise ContractError(f"{filename} 的 {module} 模块存在无效题目 code。")
             if len(codes) != len(set(codes)):
                 raise ContractError(f"{filename} 的 {module} 模块存在重复题目。")
@@ -141,7 +151,6 @@ def _validate_year_project_package(package_dir: Path, year: int) -> list[str]:
             if overlap:
                 raise ContractError(f"{filename} 的不同模块重复使用题目：{sorted(overlap)}。")
             paper_codes.update(codes)
-            total_questions += len(codes)
 
             previous_codes = module_question_codes.setdefault(module, codes)
             if previous_codes != codes:
@@ -150,9 +159,6 @@ def _validate_year_project_package(package_dir: Path, year: int) -> list[str]:
                 previous_owner = question_owners.setdefault(code, module)
                 if previous_owner != module:
                     raise ContractError(f"题目 {code} 在年度组合卷中被分配到多个模块。")
-
-        if metadata.get("totalQuestions") != total_questions:
-            raise ContractError(f"{filename} 的 totalQuestions 与三个模块题量之和不一致。")
 
     return list(expected)
 
@@ -324,7 +330,7 @@ def command_assemble_year(args: argparse.Namespace) -> None:
             shutil.rmtree(canonical_staging_root, ignore_errors=True)
 
     created = [output_dir / filename for filename in staged_names]
-    print(f"已生成 {len(created)} 套新版模块分组 ESAT 年度诊断组合卷：{output_dir.resolve()}")
+    print(f"已生成 {len(created)} 套统一 sections 结构的 ESAT 年度诊断组合卷：{output_dir.resolve()}")
     for path in created:
         print(f"- {path.name}")
 
@@ -346,13 +352,13 @@ def build_parser() -> argparse.ArgumentParser:
     assemble = subparsers.add_parser("assemble", help="生成一套 ESAT 诊断组合卷")
     assemble.add_argument("--input", required=True, help="已通过校验的年度 parsed_exam JSON。")
     assemble.add_argument("--constraints", required=True, help="ESAT 模块组合约束 JSON。")
-    assemble.add_argument("--output", required=True, help="新版模块分组诊断卷 JSON 输出路径。")
+    assemble.add_argument("--output", required=True, help="统一 sections 结构诊断卷 JSON 输出路径。")
     assemble.add_argument("--canonical-output", help="可选：同时保存内部 assembled_exam canonical JSON。")
     assemble.set_defaults(handler=command_assemble)
 
     assemble_year = subparsers.add_parser("assemble-year", help="自动生成年度 6 套 ESAT 诊断组合卷")
     assemble_year.add_argument("--input", required=True, help="已通过校验的年度 parsed_exam JSON。")
-    assemble_year.add_argument("--output-dir", required=True, help="6 套新版模块分组诊断卷 JSON 输出目录。")
+    assemble_year.add_argument("--output-dir", required=True, help="6 套统一 sections 结构诊断卷 JSON 输出目录。")
     assemble_year.add_argument("--constraints", help="可选的年度通用约束 JSON。")
     assemble_year.add_argument("--canonical-output-dir", help="可选：保存六套内部 assembled_exam canonical JSON 的目录。")
     assemble_year.set_defaults(handler=command_assemble_year)

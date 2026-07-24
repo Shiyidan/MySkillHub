@@ -19,7 +19,7 @@ from .esat_syllabus import esat_root, module_descriptor, syllabus_item, syllabus
 from .fingerprint import question_fingerprint
 from .syllabus_index import syllabus_item_for_exam, syllabus_items_for_exam_codes
 
-CONTRACT_VERSION = "3.3.0"
+CONTRACT_VERSION = "3.4.0"
 FINGERPRINT_VERSION = "2"
 DOCUMENT_TYPES = {"parsed_exam", "generated_exam", "assembled_exam"}
 VALIDATION_STATUSES = {"draft", "passed", "failed"}
@@ -42,6 +42,8 @@ QUESTION_FIELDS = {
 }
 ASSEMBLED_QUESTION_FIELDS = QUESTION_FIELDS | {"assembled_section"}
 BLOCK_TYPES = {"text", "latex", "image_ref"}
+LATEX_MODES = {"inline", "block"}
+BLOCK_ALIGNMENTS = {"left", "center", "right"}
 QUESTION_TYPES = {"multiple_choice", "free_response"}
 DIFFICULTIES = {"easy", "medium", "hard", "composite"}
 IMAGE_ROLES = {"question", "option", "explanation"}
@@ -235,7 +237,13 @@ def _validate_tmua_syllabus_item_list(value: Any, label: str, expected_items: li
         _validate_tmua_syllabus_item(item, f"{label}[{offset}]", expected)
 
 
-def _validate_blocks(value: Any, label: str, *, allow_empty: bool = False) -> None:
+def _validate_blocks(
+    value: Any,
+    label: str,
+    *,
+    allow_empty: bool = False,
+    allow_block_math: bool = True,
+) -> None:
     _require(isinstance(value, list), f"{label}必须是内容块数组。")
     if not allow_empty:
         _require(bool(value), f"{label}不能为空。")
@@ -244,10 +252,34 @@ def _validate_blocks(value: Any, label: str, *, allow_empty: bool = False) -> No
         _require(isinstance(block, dict), f"{block_label}必须是对象。")
         block_type = block.get("type")
         _require(block_type in BLOCK_TYPES, f"{block_label}.type 不受支持。")
-        expected = {"type", "image_id"} if block_type == "image_ref" else {"type", "content"}
+        if block_type == "image_ref":
+            _exact_fields(block, {"type", "image_id"}, block_label)
+            _nonempty_text(block["image_id"], f"{block_label}.image_id不能为空。")
+            continue
+        if block_type == "text":
+            allowed = {"type", "content"}
+            if "break_before" in block:
+                allowed.add("break_before")
+            _exact_fields(block, allowed, block_label)
+            if "break_before" in block:
+                _require(isinstance(block["break_before"], bool), f"{block_label}.break_before 必须是布尔值。")
+            _nonempty_text(block["content"], f"{block_label}.content不能为空。")
+            continue
+
+        mode = block.get("mode")
+        _require(mode in LATEX_MODES, f"{block_label}.mode 必须是 inline 或 block。")
+        expected = {"type", "content", "mode"}
+        if "break_before" in block:
+            expected.add("break_before")
+            _require(isinstance(block["break_before"], bool), f"{block_label}.break_before 必须是布尔值。")
+        if mode == "block":
+            _require(allow_block_math, f"{block_label}不允许使用独立公式。")
+            expected.add("align")
+            _require(block.get("align") in BLOCK_ALIGNMENTS, f"{block_label}.align 必须是 left、center 或 right。")
+        else:
+            _require("align" not in block, f"{block_label}行内公式不得设置 align。")
         _exact_fields(block, expected, block_label)
-        key = "image_id" if block_type == "image_ref" else "content"
-        _nonempty_text(block[key], f"{block_label}.{key}不能为空。")
+        _nonempty_text(block["content"], f"{block_label}.content不能为空。")
 
 
 def _validate_options(question: dict[str, Any], label: str) -> list[str]:
@@ -262,7 +294,7 @@ def _validate_options(question: dict[str, Any], label: str) -> list[str]:
         option_label = f"{label}第 {offset} 个选项"
         _exact_fields(option, {"label", "content"}, option_label)
         labels.append(_nonempty_text(option["label"], f"{option_label}.label 不能为空。"))
-        _validate_blocks(option["content"], f"{option_label}.content")
+        _validate_blocks(option["content"], f"{option_label}.content", allow_block_math=False)
     _require(len(labels) == len(set(labels)), f"{label}选项标签不得重复。")
     if question["question_type"] == "multiple_choice":
         _require(question["answer"] in labels, f"{label}答案必须匹配一个选项标签。")

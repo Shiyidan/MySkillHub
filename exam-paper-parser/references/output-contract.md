@@ -1,8 +1,8 @@
 # 输出契约
 
-正式输出统一使用共享契约 `exam-paper-core/schema/exam-document.schema.json`，解析结果的 `document_type` 固定为 `parsed_exam`，当前契约版本为 `3.3.0`。
+正式输出统一使用共享契约 `exam-paper-core/schema/exam-document.schema.json`，解析结果的 `document_type` 固定为 `parsed_exam`，当前契约版本为 `3.4.0`。
 
-完整字段示例见 `references/parsed-output-template.md`。制作 ESAT legacy 年度 JSON 时，必须同时对照该模板和 `../exam-paper-core/syllabus/esat_syllabus.json`。制作 TMUA JSON 时，必须同时对照 `references/tmua-output-template.md` 和 `../exam-paper-core/syllabus/tmua_syllabus.json`。
+完整字段示例见 `references/parsed-output-template.md`。所有考试的题面内容必须同时遵守 `references/content-layout.md`。制作 ESAT legacy 年度 JSON 时，必须同时对照该模板和 `../exam-paper-core/syllabus/esat_syllabus.json`。制作 TMUA JSON 时，必须同时对照 `references/tmua-output-template.md` 和 `../exam-paper-core/syllabus/tmua_syllabus.json`。
 
 交给 `finalize` 的草稿根级只能是：
 
@@ -26,6 +26,8 @@
 
 - 标准题目标识：`code`、`number`、`questionNumber`、`examType`、`source_examType`、`year`。
 - 英文题面内容块：`title`，选项内容块：`options`。
+- `title[].latex` 必须显式声明 `mode`。行内公式使用 `mode: "inline"` 并留在当前句子；独立公式使用 `mode: "block"`，必须声明 `align`，且原卷中的多行公式逐行保存。
+- 原卷物理换行不等于段落边界；不得产生标点孤段、连接词孤段或单字母变量孤段。
 - 官方答案、题型、难度、学科、主题、唯一主知识点和 `syllabus_tags`。难度只允许 `easy`、`medium`、`hard`、`composite`；`composite` 至少需要两个实际参与求解的知识点。
 - `target_exam_scope`：目标考试范围标注。ESAT legacy 年度库必须标明模块、模块代码、模块标签、6 位 ESAT 考纲代码、`syllabus_items`、范围状态和排除原因。
 - 完整中文 `learning_analysis`，其中 `solution_trace.steps` 至少三步，错误选项逐一解释。
@@ -97,7 +99,7 @@ TMUA 字段硬规则：
 
 正式输出自动补入：
 
-- `contract_version: "3.3.0"`
+- `contract_version: "3.4.0"`
 - `document_type: "parsed_exam"`
 - 来源文件共同计算的 `source_hash`
 - `validation_status: "passed"`

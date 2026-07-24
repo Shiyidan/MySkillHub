@@ -1,6 +1,6 @@
 # 输出契约
 
-正式输出统一使用共享契约 `exam-paper-core/schema/exam-document.schema.json`，生成结果的 `document_type` 固定为 `generated_exam`。
+正式输出统一使用共享契约 `exam-paper-core/schema/exam-document.schema.json`，生成结果的 `document_type` 固定为 `generated_exam`，当前契约版本为 `3.4.0`。题面内容块同时遵守 `../exam-paper-parser/references/content-layout.md`。
 
 交给 `finalize` 的草稿根级只能是：
 
@@ -22,6 +22,7 @@
 
 - 标准题目标识：`code`、`number`、`questionNumber`、`examType`、`source_examType`、`year`。
 - 英文题面内容块：`title`，选项内容块：`options`。
+- 行内公式使用 `mode: "inline"` 并保留在当前段落；独立公式使用 `mode: "block"` 并声明 `align`。不同公式行不得合并为一行。
 - 唯一答案、题型、难度、学科、主题、唯一主知识点和 `syllabus_tags`。难度只允许 `easy`、`medium`、`hard`、`composite`；`composite` 至少需要两个实际参与求解的知识点。
 - `target_exam_scope`：新题目标考试范围标注，ESAT 新题必须明确模块、考纲代码和判断依据；TMUA 新题必须明确 Paper 1/2、`TMUA-P1/TMUA-P2`、TMUA syllabus code/path 和判断依据。
 - 完整中文 `learning_analysis`，其中 `solution_trace.steps` 至少三步，错误选项逐一解释。
@@ -61,7 +62,7 @@ TMUA 生成字段硬规则：
 
 正式输出自动补入：
 
-- `contract_version: "3.3.0"`
+- `contract_version: "3.4.0"`
 - `document_type: "generated_exam"`
 - 输入与约束共同计算的 `source_hash`
 - `validation_status: "passed"`

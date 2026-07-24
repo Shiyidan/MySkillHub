@@ -39,34 +39,41 @@ class AssembleYearAtomicTest(unittest.TestCase):
         }
         combination_name = ASSEMBLE_SCRIPT.safe_combination_name(modules)
         code = f"ESAT_{year}_{combination_name}"
-        groups = [
+        section_codes = {
+            "Mathematics 1": "maths1",
+            "Biology": "biology",
+            "Chemistry": "chemistry",
+            "Physics": "physics",
+            "Mathematics 2": "maths2",
+        }
+        sections = [
             {
-                "subject": module,
-                "subject_code": module_codes[module],
-                "duration": 40,
-                "items": [{"code": f"{module_codes[module]}_Q01"}],
+                "code": section_codes[module],
+                "sectionType": "subject",
+                "order": index,
+                "questions": [{"code": f"{module_codes[module]}_Q01"}],
             }
-            for module in modules
+            for index, module in enumerate(modules, 1)
         ]
         return {
-            "code": code,
             "metadata": {
-                "paperName": code,
-                "year": year,
-                "duration": 120,
+                "code": code,
+                "title": code,
                 "examType": "ESAT",
+                "year": year,
                 "paperType": "realPaper",
-                "totalQuestions": len(groups),
+                "assemblyType": "legacy_equivalent",
+                "deliveryMode": "section_sequence",
                 "remarks": "test",
             },
-            "questions": groups,
+            "sections": sections,
         }
 
     def _write_project_package(self, package_dir: Path, year: int = 2023) -> None:
         package_dir.mkdir(parents=True)
         for modules in ASSEMBLE_SCRIPT.ESAT_COMBINATIONS:
             paper = self._project_paper(year, modules)
-            (package_dir / f"{paper['code']}.json").write_text(
+            (package_dir / f"{paper['metadata']['code']}.json").write_text(
                 json.dumps(paper, ensure_ascii=False),
                 encoding="utf-8",
             )
@@ -95,7 +102,7 @@ class AssembleYearAtomicTest(unittest.TestCase):
             assembled["metadata"]["year"],
             assembled["metadata"]["assembly"]["modules"],
         )
-        self.assertEqual(paper["code"], paper_code)
+        self.assertEqual(paper["metadata"]["code"], paper_code)
         return paper
 
     def test_failure_does_not_publish_partial_year(self) -> None:
@@ -153,12 +160,12 @@ class AssembleYearAtomicTest(unittest.TestCase):
             modules = ASSEMBLE_SCRIPT.ESAT_COMBINATIONS[1]
             path = package_dir / f"ESAT_2023_{ASSEMBLE_SCRIPT.safe_combination_name(modules)}.json"
             paper = json.loads(path.read_text(encoding="utf-8"))
-            paper["questions"][1], paper["questions"][2] = paper["questions"][2], paper["questions"][1]
+            paper["sections"][1], paper["sections"][2] = paper["sections"][2], paper["sections"][1]
             path.write_text(json.dumps(paper, ensure_ascii=False), encoding="utf-8")
 
             with (
                 patch.object(ASSEMBLE_SCRIPT, "validate_project_diagnostic_paper"),
-                self.assertRaisesRegex(ASSEMBLE_SCRIPT.ContractError, "模块组合"),
+                self.assertRaisesRegex(ASSEMBLE_SCRIPT.ContractError, "section code 组合"),
             ):
                 ASSEMBLE_SCRIPT._validate_year_project_package(package_dir, 2023)
 
@@ -169,7 +176,7 @@ class AssembleYearAtomicTest(unittest.TestCase):
             modules = ("Mathematics 1", "Chemistry", "Physics")
             path = package_dir / f"ESAT_2023_{ASSEMBLE_SCRIPT.safe_combination_name(modules)}.json"
             paper = json.loads(path.read_text(encoding="utf-8"))
-            paper["questions"][2]["items"][0]["code"] = "130000_Q_DIFFERENT"
+            paper["sections"][2]["questions"][0]["code"] = "130000_Q_DIFFERENT"
             path.write_text(json.dumps(paper, ensure_ascii=False), encoding="utf-8")
 
             with (

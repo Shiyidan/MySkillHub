@@ -13,6 +13,7 @@
 ## 2. source_inspection
 
 - 逐页检查题号、选项、公式、图形、页眉页脚和答案来源。
+- 逐题记录正文栏 bbox、可见段间空白、独立公式 bbox、公式行数和相对正文栏的对齐方式。PDF 物理换行与 OCR token 边界不得直接作为段落边界。
 - 对同批次所有题卷执行跨来源重复扫描，至少比较规范化题干、选项内容、图形语义和正确答案；为确认重复、疑似重复和冲突重复分别建立候选组。
 - 发现缺页、扫描模糊、答案冲突或页码歧义时，暂停受影响题目，不得猜测。
 - 图形只截取可打印题面区域；页眉、脚注、水印或相邻题污染会阻断该题。
@@ -32,6 +33,7 @@
 
 - 独立求解必须在官方答案对齐之前完成。
 - `solution_trace` 是中文解析和学习分析的唯一推理来源。
+- “题面结构恢复”必须执行 `references/content-layout.md`：行内变量与相邻文字保留在同一段；独立公式使用 `mode: block` 并声明 `align`；原卷中的多行独立公式逐行保存，不得用 `\qquad` 或 `aligned` 合并。
 - ESAT legacy 题目必须在考纲映射步骤读取 `../exam-paper-core/syllabus/esat_syllabus.json`，再写入 `target_exam_scope`：使用 `scope_status` 标明 `in_scope`、`out_of_scope`、`partially_in_scope` 或 `unknown`，并给出唯一科目、6 位考纲代码和 `syllabus_items`。
 - `syllabus_codes` 必须全部来自 `esat_syllabus.json`，不得使用自由文本旧代码；`syllabus_items` 必须与 code 对应的 label、module、parent、path 完全一致。
 - ESAT 的 `in_scope`、`partially_in_scope` 题目必须满足 `target_exam_scope.modules == [subject]`，且 `subject_code` 与考纲科目 code 一致。
@@ -51,6 +53,7 @@
 ## 5. independent_review
 
 - 独立复核页码证据、题号连续性、答案一致性、英文题面、中文解析、图形引用、当前考试 syllabus code/label/path 和目标考试范围标注；ESAT 与 TMUA 必须分别按各自模板核对。
+- 复核内容块中不存在标点孤段、连接词孤段或句内单字母变量孤段；逐一比对原卷独立公式的行数和对齐方式。
 - 复核跨卷重复组：题干、选项、正确答案和考纲归属全部一致才标记为确认重复；仅题干相同、图形证据不足或高相似题必须保留，不能自动删除。
 - 同题面出现答案或考纲归属冲突时，退回“官方答案对齐”或“考纲映射”步骤，解决前不得导出。
 - 复核只做拦截和定位，不直接补写字段。

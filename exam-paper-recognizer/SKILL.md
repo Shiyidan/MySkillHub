@@ -59,7 +59,8 @@ PDF -> 自然 Markdown -> Markdown 解析器 -> 数据库 JSON
 
 3. 抽取增强版项目 JSON。
    - 默认使用 `references/project-question.schema.json`。
-   - 保留英文原文、选项标签、公式表达和有意义的段落换行。
+- 保留英文原文、选项标签、公式表达和有意义的段落换行。
+- PDF 自动折行和 OCR token 边界不是段落边界。句内变量不得拆成独立段落；原卷中多行独立公式必须逐行保存，并在结构化内容块中保留 `left/center/right` 对齐语义。本规则对 ESAT、TMUA、ENGAA、NSAA 和 STEP 全局生效。
    - 数学表达式必须使用 Markdown + LaTeX：行内公式用 `$...$`，独立公式用 `$$...$$`。不要把 `π`、根号、上下标、分式退化为 `?`、`sqrt`、`^` 或普通斜杠文本。
    - 必须保留基础字段 `number/title/options/answer/images`，确保项目现有入库和渲染链路可继续工作。
    - `title` 是兼容展示字段，也必须保留段落换行和 LaTeX 公式；如果题干中有居中/独立公式，`title` 中也要用空行 + `$$...$$` 单独表示。

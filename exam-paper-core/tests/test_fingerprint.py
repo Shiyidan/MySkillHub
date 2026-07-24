@@ -19,7 +19,10 @@ class FingerprintCompatibilityTest(unittest.TestCase):
                 {"type": "text", "content": "  AREA  \uff21\n equals  10  "},
             ],
             "options": [
-                {"label": "A", "content": [{"type": "latex", "content": "R^2"}]},
+                {
+                    "label": "A",
+                    "content": [{"type": "latex", "content": "R^2", "mode": "inline"}],
+                },
                 {"label": "B", "content": [{"type": "text", "content": "  r  "}]},
             ],
             "diagram": {"semantics": "  Circle   Radius  "},

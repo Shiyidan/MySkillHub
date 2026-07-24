@@ -13,10 +13,11 @@ import re
 import sys
 from pathlib import Path
 
-CORE_ROOT = Path(r"C:\Users\SW\.codex\skills\exam-paper-core\python")
+CORE_ROOT = Path(__file__).resolve().parents[2] / "exam-paper-core" / "python"
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 from exam_paper_core.content_blocks import from_structured_parts, normalize_math_text
+from exam_paper_core.project_export import validate_project_diagnostic_paper
 
 
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -38,7 +39,13 @@ def recover_source_layout(q: dict, year: int) -> dict:
             {"type": "text", "break_before": True, "content": "What is the greatest possible area of triangle PRQ?"},
         ]
         values = [r"18+9\sqrt{3}", r"18\sqrt{3}", r"27+9\sqrt{3}", r"27\sqrt{3}", r"36+9\sqrt{3}", r"36\sqrt{3}"]
-        q["options"] = [{"label": label, "content": [{"type": "latex", "content": value}]} for label, value in zip("ABCDEF", values)]
+        q["options"] = [
+            {
+                "label": label,
+                "content": [{"type": "latex", "content": value, "mode": "inline"}],
+            }
+            for label, value in zip("ABCDEF", values)
+        ]
         return q
     return q
 
@@ -61,11 +68,56 @@ def inline_content(parts) -> str:
         content = part.get("content")
         if not isinstance(content, str) or not content.strip():
             raise ValueError("empty structured content part")
-        out.append(content if part["type"] == "text" else "\\(" + content + "\\)")
+        if part["type"] == "latex":
+            if part.get("mode") != "inline":
+                raise ValueError("option latex must use mode=inline")
+            out.append("\\(" + content + "\\)")
+        else:
+            out.append(content)
     return clean("".join(out)).strip()
 
 
-def question_obj(q: dict, module_code: str, number: int, year: int, subject: str, subject_code: str, asset_root: Path) -> dict:
+def knowledge_points(q: dict) -> list[dict[str, str]]:
+    result = []
+    for index, point in enumerate(q.get("knowledge_points", []) or []):
+        if not isinstance(point, dict):
+            raise ValueError(f"{q.get('id')}: knowledge point must be an object")
+        code = point.get("code")
+        label = point.get("label") or point.get("name")
+        if not isinstance(code, str) or not code or not isinstance(label, str) or not label:
+            raise ValueError(f"{q.get('id')}: knowledge point code and label are required")
+        role = point.get("role")
+        if role not in {"primary", "secondary"}:
+            role = "primary" if point.get("is_primary") or index == 0 else "secondary"
+        result.append({"code": code, "label": label, "role": role})
+    return result
+
+
+def classification(q: dict, fallback_subject: str, fallback_subject_code: str) -> dict:
+    syllabus_items = q.get("target_exam_scope", {}).get("syllabus_items", [])
+    first_item = syllabus_items[0] if isinstance(syllabus_items, list) and syllabus_items else {}
+    return {
+        "subject": first_item.get("module") or q.get("subject") or fallback_subject,
+        "subjectCode": first_item.get("module_code") or q.get("subject_code") or fallback_subject_code,
+        "topic": q.get("topic", ""),
+        "topicCode": q.get("topic_code", ""),
+        "knowledgePoints": knowledge_points(q),
+    }
+
+
+def learning_analysis(q: dict) -> dict:
+    analysis = q.get("learning_analysis", {})
+    if not isinstance(analysis, dict):
+        raise ValueError(f"{q.get('id')}: learning_analysis must be an object")
+    return {
+        "correctSolution": analysis.get("correct_solution") or analysis.get("solution") or "",
+        "examFocus": analysis.get("exam_focus", ""),
+        "commonErrorCauses": analysis.get("common_error_causes", []),
+        "reviewGuidance": analysis.get("review_guidance", ""),
+    }
+
+
+def question_obj(q: dict, section_code: str, number: int, year: int, subject: str, subject_code: str, asset_root: Path) -> dict:
     q = recover_source_layout(q, year)
     title_parts = q.get("title")
     if not isinstance(title_parts, list):
@@ -109,23 +161,21 @@ def question_obj(q: dict, module_code: str, number: int, year: int, subject: str
     return {
         "code": q.get("code") or q.get("id") or (_ for _ in ()).throw(ValueError("question code/id is required")),
         "number": number,
-        "examType": "TMUA",
-        "source_examType": q.get("source_examType") or q.get("source_examType".lower()) or "TMUA",
-        "year": year,
-        "subject": subject,
-        "subject_code": subject_code,
-        "question_type": "single_choice",
-        "difficulty": q.get("difficulty", ""),
-        "is_ai_generated": bool(q.get("is_ai_generated", False)),
         "title": title,
-        "content_blocks": blocks,
+        "contentBlocks": blocks,
         "options": final_options,
         "answer": [answer],
         "images": images,
-        "topic_code": q.get("topic_code", ""),
-        "topic": q.get("topic", ""),
-        "knowledge_points": q.get("knowledge_points", []),
-        "learning_analysis": q.get("learning_analysis", {}),
+        "questionType": "single_choice",
+        "difficulty": q.get("difficulty", ""),
+        "classification": classification(q, subject, subject_code),
+        "source": {
+            "examType": q.get("source_examType") or "TMUA",
+            "year": year,
+            "sectionCode": section_code,
+            "questionNumber": q.get("questionNumber") or q.get("number") or number,
+        },
+        "learningAnalysis": learning_analysis(q),
     }
 
 
@@ -134,34 +184,40 @@ def build(canonical: dict, asset_root: Path) -> dict:
     all_questions = canonical.get("questions")
     if not isinstance(all_questions, list):
         raise ValueError("canonical questions list is required")
-    modules = []
-    module_specs = [("paper1", 1, "Paper 1: Applications of Mathematical Knowledge", "TMUA-P1"),
-                    ("paper2", 2, "Paper 2: Mathematical Reasoning", "TMUA-P2")]
+    sections = []
+    module_specs = [
+        ("paper1", 1, "Mathematics", "210000"),
+        ("paper2", 2, "Mathematics", "210000"),
+    ]
     for code, order, subject, subject_code in module_specs:
         prefix = "P1" if code == "paper1" else "P2"
         qs = [q for q in all_questions if f"_{prefix}_" in str(q.get("code", ""))]
         if not qs:
             qs = [q for q in all_questions if str(q.get("id", "")).find(f"_{prefix}_") >= 0]
-        if not isinstance(qs, list) or len(qs) != 20:
+        qs = sorted(qs, key=lambda item: int(item.get("questionNumber") or item.get("number") or 0))
+        if len(qs) != 20:
             raise ValueError(f"{code}: exactly 20 questions are required")
-        modules.append({
-            "code": code, "order": order, "subject": subject, "subject_code": subject_code,
-            "duration": 75, "totalQuestions": 20,
+        sections.append({
+            "code": code,
+            "sectionType": "paper",
+            "order": order,
             "questions": [question_obj(q, code, i, year, subject, subject_code, asset_root) for i, q in enumerate(qs, 1)],
         })
-    return {
-        "schemaVersion": "diagnostic-paper-v2",
-        "code": f"TMUA-{year}",
+    result = {
         "metadata": {
-            "paperName": f"TMUA {year} Full Paper",
-            "year": year, "duration": 150, "examType": "TMUA", "paperType": "realPaper",
-            "totalQuestions": 40, "deliveryMode": "module_sequence",
-            "breakPolicy": {"durationSeconds": 0, "skippable": False},
-            "assemblyType": "original", "sourceExamTypes": ["TMUA"],
+            "code": f"TMUA-{year}",
+            "title": f"TMUA {year} Diagnostic Paper",
+            "examType": "TMUA",
+            "year": year,
+            "paperType": "realPaper",
+            "assemblyType": "original",
+            "deliveryMode": "section_sequence",
             "remarks": "Annual TMUA paper; Paper 1 and Paper 2 are delivered as two scored modules.",
         },
-        "modules": modules,
+        "sections": sections,
     }
+    validate_project_diagnostic_paper(result)
+    return result
 
 
 def main() -> None:

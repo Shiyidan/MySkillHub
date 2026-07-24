@@ -1,35 +1,62 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://local.codex/exam-paper-core/schema/project-diagnostic-paper.schema.json",
-  "title": "QuizTestDemo ESAT Legacy Diagnostic Paper",
-  "description": "由内部 assembled_exam 导出的按模块分组、自包含的 ESAT legacy 真题诊断卷。",
+  "$id": "https://oxbridge-ai.local/schema/project-diagnostic-paper.schema.json",
+  "title": "Unified ESAT and TMUA project diagnostic paper",
   "type": "object",
   "additionalProperties": false,
-  "required": ["code", "metadata", "questions"],
+  "required": ["metadata", "sections"],
   "properties": {
-    "code": {"type": "string", "minLength": 1},
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["paperName", "year", "duration", "examType", "paperType", "totalQuestions", "remarks"],
+      "required": [
+        "code",
+        "title",
+        "examType",
+        "year",
+        "paperType",
+        "assemblyType",
+        "deliveryMode",
+        "remarks"
+      ],
       "properties": {
-        "paperName": {"type": "string", "minLength": 1},
+        "code": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "examType": {"enum": ["ESAT", "TMUA"]},
         "year": {"type": "integer"},
-        "duration": {"type": "integer", "minimum": 1},
-        "examType": {"const": "ESAT"},
-        "paperType": {"const": "realPaper"},
-        "totalQuestions": {"type": "integer", "minimum": 1},
+        "paperType": {"enum": ["realPaper", "mockPaper", "aiPaper"]},
+        "assemblyType": {"enum": ["legacy_equivalent", "original"]},
+        "deliveryMode": {"const": "section_sequence"},
         "remarks": {"type": "string", "minLength": 1}
       }
     },
-    "questions": {
+    "sections": {
       "type": "array",
       "minItems": 1,
-      "items": {"$ref": "#/$defs/module_group"}
+      "items": {"$ref": "#/$defs/section"}
     }
   },
   "$defs": {
-    "content_block": {
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "sectionType",
+        "order",
+        "questions"
+      ],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "sectionType": {"enum": ["subject", "paper"]},
+        "order": {"type": "integer", "minimum": 1},
+        "questions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/question"}
+        }
+      }
+    },
+    "contentBlock": {
       "oneOf": [
         {
           "type": "object",
@@ -37,16 +64,18 @@
           "required": ["type", "text"],
           "properties": {
             "type": {"const": "paragraph"},
-            "text": {"type": "string", "minLength": 1}
+            "text": {"type": "string", "minLength": 1},
+            "align": {"enum": ["left", "center", "right"]}
           }
         },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["type", "image_id"],
           "properties": {
             "type": {"const": "image_ref"},
-            "image_id": {"type": "string", "minLength": 1}
+            "image_id": {"type": "string", "minLength": 1},
+            "alt": {"type": "string"}
           }
         }
       ]
@@ -62,32 +91,17 @@
       }
     },
     "image": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id", "type", "alt", "svg"],
-          "properties": {
-            "id": {"type": "string", "minLength": 1},
-            "type": {"const": "svg"},
-            "alt": {"type": "string", "minLength": 1},
-            "svg": {"type": "string", "minLength": 1}
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["id", "type", "alt", "src"],
-          "properties": {
-            "id": {"type": "string", "minLength": 1},
-            "type": {"const": "image"},
-            "alt": {"type": "string", "minLength": 1},
-            "src": {"type": "string", "pattern": "^data:image/"}
-          }
-        }
-      ]
+      "type": "object",
+      "required": ["id", "type", "alt"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"enum": ["svg", "image"]},
+        "alt": {"type": "string"},
+        "svg": {"type": "string"},
+        "src": {"type": "string"}
+      }
     },
-    "point": {
+    "knowledgePoint": {
       "type": "object",
       "additionalProperties": false,
       "required": ["code", "label", "role"],
@@ -97,25 +111,44 @@
         "role": {"enum": ["primary", "secondary"]}
       }
     },
-    "learning_analysis": {
+    "classification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["exam_focus", "solution", "review_guidance"],
-      "properties": {
-        "exam_focus": {"type": "string", "minLength": 1},
-        "solution": {"type": "string", "minLength": 1},
-        "review_guidance": {"type": "string", "minLength": 1}
-      }
-    },
-    "module_group": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["subject", "subject_code", "duration", "items"],
+      "required": ["subject", "subjectCode", "topic", "topicCode", "knowledgePoints"],
       "properties": {
         "subject": {"type": "string", "minLength": 1},
-        "subject_code": {"type": "string", "minLength": 1},
-        "duration": {"const": 40},
-        "items": {"type": "array", "items": {"$ref": "#/$defs/question"}}
+        "subjectCode": {"type": "string", "minLength": 1},
+        "topic": {"type": "string"},
+        "topicCode": {"type": "string"},
+        "knowledgePoints": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/knowledgePoint"}
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["examType", "year", "sectionCode", "questionNumber"],
+      "properties": {
+        "examType": {"type": "string", "minLength": 1},
+        "year": {"type": "integer"},
+        "sectionCode": {"type": "string", "minLength": 1},
+        "questionNumber": {"type": ["integer", "string"]}
+      }
+    },
+    "learningAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correctSolution", "examFocus", "commonErrorCauses", "reviewGuidance"],
+      "properties": {
+        "correctSolution": {"type": "string"},
+        "examFocus": {"type": "string"},
+        "commonErrorCauses": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "reviewGuidance": {"type": "string"}
       }
     },
     "question": {
@@ -125,51 +158,44 @@
         "code",
         "number",
         "title",
-        "content_blocks",
+        "contentBlocks",
         "options",
         "answer",
         "images",
-        "examType",
-        "source_examType",
-        "year",
-        "topic",
-        "topic_code",
-        "question_type",
+        "questionType",
         "difficulty",
-        "syllabus_points",
-        "knowledge_points",
-        "learning_analysis"
+        "classification",
+        "source",
+        "learningAnalysis"
       ],
       "properties": {
         "code": {"type": "string", "minLength": 1},
         "number": {"type": "integer", "minimum": 1},
         "title": {"type": "string", "minLength": 1},
-        "content_blocks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/content_block"}},
-        "options": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/option"}},
-        "answer": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-        "images": {"type": "array", "items": {"$ref": "#/$defs/image"}},
-        "examType": {"const": "ESAT"},
-        "source_examType": {"enum": ["ENGAA", "NSAA"]},
-        "year": {"type": "integer"},
-        "topic": {"type": "string", "minLength": 1},
-        "topic_code": {"type": "string", "minLength": 1},
-        "question_type": {"enum": ["single_choice", "multiple_choice", "short_answer"]},
+        "contentBlocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/contentBlock"}
+        },
+        "options": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/option"}
+        },
+        "answer": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        },
+        "images": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/image"}
+        },
+        "questionType": {"enum": ["single_choice", "multiple_choice", "short_answer"]},
         "difficulty": {"enum": ["easy", "medium", "hard", "composite"]},
-        "syllabus_points": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point"}},
-        "knowledge_points": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point"}},
-        "learning_analysis": {"$ref": "#/$defs/learning_analysis"}
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {"difficulty": {"const": "composite"}},
-            "required": ["difficulty"]
-          },
-          "then": {
-            "properties": {"knowledge_points": {"minItems": 2}}
-          }
-        }
-      ]
+        "classification": {"$ref": "#/$defs/classification"},
+        "source": {"$ref": "#/$defs/source"},
+        "learningAnalysis": {"$ref": "#/$defs/learningAnalysis"}
+      }
     }
   }
 }
